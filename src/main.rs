@@ -180,6 +180,12 @@ fn divide_venceras(
         return ExhaustiveResult::Nothing;
     }
 
+    
+    if end_index - start_index + 1 < 6 {
+        return calcula_fixed(puntos, start_index, end_index, best_option);
+    }
+    
+
     let izq = divide_venceras(puntos, start, mitad, best_option);
     let drc = divide_venceras(puntos, mitad, end, best_option);
 
@@ -225,9 +231,7 @@ fn divide_venceras(
                     return ExhaustiveResult::NotFound(distancia_minima);
                 };
             }
-            _ => {
-                unreachable!()
-            }
+            _ => unreachable!(),
         };
         /*
         if aux.distancia < distancia_minima.distancia {
@@ -246,7 +250,7 @@ fn divide_venceras(
                 return ExhaustiveResult::NotFound(distancia_minima);
             };
         }
-        _ => return ExhaustiveResult::Nothing,
+        _ => unreachable!(),
     }
     /*
     if aux.distancia < distancia_minima.distancia {
@@ -305,9 +309,9 @@ static N_POINTS: usize = 100_000;
 static MEDIA: u128 = 10;
 
 fn main() {
-    let mut puntos = genera_random(N_POINTS, 1000.0, 0.0);
-    puntos.sort();
-    write_points(&puntos);
+    //let mut puntos = genera_random(N_POINTS, 1000.0, 0.0);
+    //puntos.sort();
+    //write_points(&puntos);
     let puntos = read_points_from_file("puntos.tsp");
     println!("GO!");
     let puntos = puntos;
