@@ -24,6 +24,7 @@ enum ExhaustiveResult {
     NotFound(BestPoint),
     Found,
     Nothing,
+    NothingRecheck(BestPoint),
 }
 
 impl Punto {
@@ -105,19 +106,20 @@ fn calcula_fixed(
         }
         i += 1;
     }*/
-
+    
+    let mut distancia;
     for i in start..end {
         for j in start..end {
             if j == i {
                 continue;
             }
 
-            for k in i + 1..end {
+            for k in (i + 1)..end {
                 if j == k {
                     continue;
                 }
 
-                let distancia: f64 = puntos[i].distancia3(&puntos[j], &puntos[k]);
+                distancia = puntos[i].distancia3(&puntos[j], &puntos[k]);
 
                 if distancia < actual_option.distancia {
                     actual_option.distancia = distancia;
@@ -172,19 +174,19 @@ fn divide_venceras(
     let mitad: f64 = (start + end) / 2.0;
     let (start_index, end_index) = get_points_between(puntos, start, end);
 
+    /*
     if end_index - start_index + 1 < 3 {
         return ExhaustiveResult::Nothing;
     }
+    */
 
     if repes(puntos, start_index, end_index) {
         return ExhaustiveResult::Nothing;
     }
 
-    
-    if end_index - start_index + 1 < 6 {
+    if end_index - start_index + 1 <= 6 {
         return calcula_fixed(puntos, start_index, end_index, best_option);
     }
-    
 
     let izq = divide_venceras(puntos, start, mitad, best_option);
     let drc = divide_venceras(puntos, mitad, end, best_option);
@@ -193,28 +195,45 @@ fn divide_venceras(
         (ExhaustiveResult::Nothing, ExhaustiveResult::Nothing) => {
             return calcula_fixed(puntos, start_index, end_index, best_option)
         }
-        (ExhaustiveResult::Found, _) => best_option.clone(),
-        (_, ExhaustiveResult::Found) => best_option.clone(),
-        (ExhaustiveResult::NotFound(r_izq), ExhaustiveResult::NotFound(r_drc)) => {
+        (ExhaustiveResult::Found, _) => recheck(puntos, best_option, end, start, mitad), //best_option.clone(),
+        (_, ExhaustiveResult::Found) => recheck(puntos, best_option, end, start, mitad),
+        (ExhaustiveResult::NotFound(mut r_izq), ExhaustiveResult::NotFound(mut r_drc)) => {
             if r_izq.distancia < r_drc.distancia {
-                r_izq
+                recheck(puntos, &mut r_izq, end, start, mitad)
             } else {
-                r_drc
+                recheck(puntos, &mut r_drc, end, start, mitad)
             }
         }
-        _ => best_option.clone(),
+        _ => recheck(puntos, best_option, end, start, mitad),
     };
-    /*
-    if izq.distancia == -1.0 && drc.distancia == -1.0 {
-        return calcula_fixed(puntos, start_index, end_index, best_option);
-    }
 
-    let mut distancia_minima = izq.clone();
-
-    if izq.distancia == -1.0 || drc.distancia != -1.0 && drc.distancia < izq.distancia {
-        distancia_minima = drc;
+    match distancia_minima {
+        ExhaustiveResult::Found => return ExhaustiveResult::Found,
+        ExhaustiveResult::NotFound(a) => return ExhaustiveResult::NotFound(a),
+        ExhaustiveResult::NothingRecheck(a) => {
+            match calcula_fixed(puntos, start_index, end_index, best_option) {
+                ExhaustiveResult::Found => return ExhaustiveResult::Found,
+                ExhaustiveResult::NotFound(aux) => {
+                    if aux.distancia < a.distancia {
+                        return ExhaustiveResult::NotFound(aux);
+                    } else {
+                        return ExhaustiveResult::NotFound(a);
+                    };
+                }
+                _ => unreachable!(),
+            }
+        }
+        _ => unreachable!(),
     }
-    */
+}
+
+fn recheck(
+    puntos: &[Punto],
+    distancia_minima: &mut BestPoint,
+    end: f64,
+    start: f64,
+    mitad: f64,
+) -> ExhaustiveResult {
     if distancia_minima.distancia < end - start {
         let (new_start, new_end) = get_points_between(
             puntos,
@@ -222,42 +241,20 @@ fn divide_venceras(
             mitad + distancia_minima.distancia,
         );
 
-        match calcula_fixed(puntos, new_start, new_end, best_option) {
+        match calcula_fixed(puntos, new_start, new_end, distancia_minima) {
             ExhaustiveResult::Found => return ExhaustiveResult::Found,
             ExhaustiveResult::NotFound(aux) => {
                 if aux.distancia < distancia_minima.distancia {
                     return ExhaustiveResult::NotFound(aux);
                 } else {
-                    return ExhaustiveResult::NotFound(distancia_minima);
+                    return ExhaustiveResult::Found;
                 };
             }
             _ => unreachable!(),
         };
-        /*
-        if aux.distancia < distancia_minima.distancia {
-            return aux;
-        } else {
-            return distancia_minima;
-        }*/
     }
 
-    match calcula_fixed(puntos, start_index, end_index, best_option) {
-        ExhaustiveResult::Found => return ExhaustiveResult::Found,
-        ExhaustiveResult::NotFound(aux) => {
-            if aux.distancia < distancia_minima.distancia {
-                return ExhaustiveResult::NotFound(aux);
-            } else {
-                return ExhaustiveResult::NotFound(distancia_minima);
-            };
-        }
-        _ => unreachable!(),
-    }
-    /*
-    if aux.distancia < distancia_minima.distancia {
-        return aux;
-    } else {
-        return distancia_minima;
-    }*/
+    ExhaustiveResult::NothingRecheck(distancia_minima.clone())
 }
 
 #[allow(unused)]
@@ -305,11 +302,11 @@ fn read_points_from_file(file_name: &str) -> Vec<Punto> {
     points
 }
 
-static N_POINTS: usize = 100_000;
-static MEDIA: u128 = 10;
+static N_POINTS: usize = 30_000;
+static MEDIA: u128 = 30;
 
 fn main() {
-    //let mut puntos = genera_random(N_POINTS, 1000.0, 0.0);
+    //let mut puntos = genera_random(N_POINTS, 800.0, 0.0);
     //puntos.sort();
     //write_points(&puntos);
     let puntos = read_points_from_file("puntos.tsp");
