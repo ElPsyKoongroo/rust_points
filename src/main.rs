@@ -92,7 +92,7 @@ impl<'a> DyV<'a> {
                         continue;
                     }
 
-                    distancia = distancia_ij + punto_i.distancia(punto_k);
+                    distancia = distancia_ij + punto_j.distancia(punto_k);
 
                     if distancia < actual_option {
                         actual_option = distancia;
@@ -127,9 +127,7 @@ impl<'a> DyV<'a> {
         let drc = self.divide_venceras(mitad, end);
 
         let distancia_minima = match (izq, drc) {
-            (ExhaustiveResult::Nothing, ExhaustiveResult::Nothing) => {
-                self.recheck(end, start)
-            }
+            (ExhaustiveResult::Nothing, ExhaustiveResult::Nothing) => self.recheck(end, start),
 
             (ExhaustiveResult::Found, _) | (_, ExhaustiveResult::Found) => {
                 self.recheck_actual_best(end, start)
@@ -140,12 +138,12 @@ impl<'a> DyV<'a> {
 
         match distancia_minima {
             ExhaustiveResult::Found => return ExhaustiveResult::Found,
-            ExhaustiveResult::NotFound(a) => return ExhaustiveResult::NotFound(a),
+            ExhaustiveResult::NotFound(_) => return ExhaustiveResult::Nothing,
             ExhaustiveResult::NothingRecheck => {
                 match self.calcula_fixed(start_index, end_index + 1) {
                     ExhaustiveResult::Found => return ExhaustiveResult::Found,
                     _ => return ExhaustiveResult::NotFound(self.best_option),
-               }
+                }
             }
             _ => unreachable!(),
         }
@@ -161,10 +159,12 @@ impl<'a> DyV<'a> {
             );
 
             match self.calcula_fixed(new_start, new_end + 1) {
-                ExhaustiveResult::Found | ExhaustiveResult::NotFound(_) => return ExhaustiveResult::Found,
+                ExhaustiveResult::Found | ExhaustiveResult::NotFound(_) => {
+                    return ExhaustiveResult::Found
+                }
                 /*
                 ExhaustiveResult::NotFound(_) => return ExhaustiveResult::Found,
-                    
+
                     if aux < self.best_option {
                         return ExhaustiveResult::NotFound(aux);
                     } else {
@@ -188,19 +188,17 @@ impl<'a> DyV<'a> {
                 mitad - distancia_minima,
                 mitad + distancia_minima,
             );
-
-            //return self.calcula_fixed(new_start, new_end+1)
-
             match self.calcula_fixed(new_start, new_end + 1) {
                 ExhaustiveResult::Found => return ExhaustiveResult::Found,
+                /*
                 ExhaustiveResult::NotFound(aux) => {
                     if aux < distancia_minima {
-                        println!("a");
                         return ExhaustiveResult::NotFound(aux);
                     } else {
                         return ExhaustiveResult::Found;
                     };
                 }
+                */
                 _ => unreachable!(),
             };
         }
@@ -271,22 +269,19 @@ fn read_points_from_file(file_name: &str) -> Vec<Punto> {
     points
 }
 
-static N_POINTS: usize = 30_000;
+static N_POINTS: usize = 800_000;
 static MEDIA: u128 = 20;
 
 fn main() {
-    
-    
     /*
     let mut puntos = genera_random(N_POINTS, 800.0, 0.0);
     puntos.sort();
     write_points(&puntos);
     */
-    
-    
+
     let puntos = read_points_from_file("puntos.tsp");
     println!("GO!");
-    let puntos = puntos;
+    //let puntos = puntos;
     let mut media = 0;
     for _ in 0..MEDIA {
         let mut dyv = DyV::new(&puntos);
