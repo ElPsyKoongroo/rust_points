@@ -1,6 +1,6 @@
 use rand::Rng;
 
-const FIXED_POINTS: usize = 30;
+const FIXED_POINTS: usize = 45;
 const POINT_FILES: &str = "point_files/";
 
 use std::{
@@ -57,33 +57,40 @@ struct DyV<'a> {
     puntos: &'a [Punto],
     best_option: BestPoint,
     points: [usize; 3],
+    fixed_points: usize,
 }
 
 impl<'a> DyV<'a> {
+    pub fn new_with_fixed(puntos: &'a [Punto], fixed_points: usize) -> DyV {
+        DyV {
+            puntos,
+            best_option: MAX,
+            points: [0; 3],
+            fixed_points,
+        }
+    }
+
+    #[allow(unused)]
     pub fn new(puntos: &'a [Punto]) -> DyV {
         DyV {
             puntos,
             best_option: MAX,
             points: [0; 3],
+            fixed_points: FIXED_POINTS,
         }
     }
 
     pub fn start(&mut self) -> BestPoint {
-        self.divide_venceras(self.puntos[0].x, self.puntos[self.puntos.len() - 1].x);
+        self.divide_venceras(self.puntos[0].x, self.puntos[self.puntos.len() - 1].x, 0, &self.puntos);
 
         self.best_option
     }
 
     fn calcula_fixed(&mut self, start: usize, end: usize) {
-        // let mut distancia: f64;
         for i in start..end {
             let punto_i = &self.puntos[i];
 
-            for j in start..end {
-                if j == i {
-                    continue;
-                }
-
+            for j in (start..i).chain(i + 1..end) {
                 let punto_j = &self.puntos[j];
                 let distancia_ij = punto_i.distancia(punto_j);
 
@@ -106,55 +113,56 @@ impl<'a> DyV<'a> {
                 }
             }
         }
-
-        /*
-        if actual_option < self.best_option {
-            self.best_option = actual_option;
-            self.points = points;
-        }
-        */
     }
 
-    fn divide_venceras(&mut self, start: f64, end: f64) {
-        let (start_index, end_index) = get_points_between(self.puntos, start, end);
+    fn divide_venceras(&mut self, start: f64, end: f64, offset: usize, s_slice: &[Punto]) {
+        let (mut start_index, mut end_index) = self.get_points_between(start, end, s_slice);
 
-        if end_index - start_index < FIXED_POINTS {
+        start_index += offset;
+        end_index += offset;
+
+        if end_index - start_index < self.fixed_points {
             self.calcula_fixed(start_index, end_index + 1);
             return;
         }
 
+        let slice = &self.puntos[start_index..end_index];
+
         let mitad: f64 = (start + end) / 2.0;
-        self.divide_venceras(start, mitad);
-        self.divide_venceras(mitad, end);
+        self.divide_venceras(start, mitad, start_index, slice);
+        self.divide_venceras(mitad, end, start_index, slice);
 
         if self.best_option < end - start {
-            self.recheck_actual_best(end, start);
-        } else {
-        };
+            self.recheck_actual_best(end, start, start_index, slice);
+        }
     }
 
-    fn recheck_actual_best(&mut self, end: f64, start: f64) {
+    fn recheck_actual_best(&mut self, end: f64, start: f64, offset: usize, s_slice: &[Punto]) {
         let mitad: f64 = (start + end) / 2.0;
-        let (new_start, new_end) = get_points_between(
-            self.puntos,
-            mitad - self.best_option,
-            mitad + self.best_option,
-        );
+        let (mut new_start, mut new_end) =
+            self.get_points_between(mitad - self.best_option, mitad + self.best_option, s_slice);
+
+        new_start += offset;
+        new_end += offset;
 
         self.calcula_fixed(new_start, new_end + 1);
     }
-}
 
-fn get_points_between(puntos: &[Punto], start: f64, end: f64) -> (usize, usize) {
-    let start_index = match puntos.binary_search_by(|p| p.x.partial_cmp(&start).unwrap()) {
-        Ok(index) => index,
-        Err(index) => index,
-    };
-    let end_index = match puntos.binary_search_by(|p| p.x.partial_cmp(&end).unwrap()) {
-        Ok(index) => index,
-        Err(index) => index - 1,
-    };
-    (start_index, end_index)
+    fn get_points_between(&self, start: f64, end: f64, puntos: &[Punto]) -> (usize, usize) {
+        let start_index = match puntos
+            .binary_search_by(|p| p.x.partial_cmp(&start).unwrap())
+        {
+            Ok(index) => index,
+            Err(index) => index,
+        };
+        let end_index = match puntos
+            .binary_search_by(|p| p.x.partial_cmp(&end).unwrap())
+        {
+            Ok(index) => index,
+            Err(index) => index - 1,
+        };
+        (start_index, end_index)
+    }
 }
 
 #[allow(unused)]
@@ -203,7 +211,7 @@ fn read_points_from_file<I: AsRef<Path>>(file_name: I) -> Vec<Punto> {
 }
 
 static N_POINTS: usize = 800_000;
-static MEDIA: u128 = 20;
+static MEDIA: u128 = 1;
 
 #[allow(unused)]
 fn write_points_with_name<I: AsRef<Path>>(name: I, puntos: &[Punto]) {
@@ -220,20 +228,20 @@ fn bench() {
     let mut puntos = read_points_from_file(PathBuf::from(POINT_FILES).join("puntos_800000.tsp"));
     puntos.sort();
     println!("GO!");
-    let mut media = 0;
-    for _ in 0..MEDIA {
-        let mut dyv = DyV::new(&puntos);
+    let mut media;
+    for points in (30..=45).step_by(3) {
+        media = 0;
+        for _ in 0..MEDIA {
+            let mut dyv = DyV::new_with_fixed(&puntos, points);
 
-        let start = Instant::now();
-        let res = dyv.start();
-        let end = Instant::now();
+            let start = Instant::now();
+            let res = dyv.start();
+            let end = Instant::now();
 
-        println!("{:?}, {:?}", res, dyv.points);
-        println!("{}", end.duration_since(start).as_millis());
-
-        media += end.duration_since(start).as_millis();
+            media += end.duration_since(start).as_millis();
+        }
+        println!("Media: {} ms with {}", media / MEDIA, points);
     }
-    println!("Media: {} ms", media / MEDIA);
 }
 
 fn main() {
