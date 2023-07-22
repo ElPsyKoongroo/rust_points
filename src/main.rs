@@ -1,10 +1,12 @@
 use rand::Rng;
 
 const FIXED_POINTS: usize = 30;
+const POINT_FILES: &str = "point_files/";
 
 use std::{
     cmp::Ordering,
     io::{BufRead, Write},
+    path::{Path, PathBuf},
     time::Instant,
 };
 
@@ -73,42 +75,44 @@ impl<'a> DyV<'a> {
     }
 
     fn calcula_fixed(&mut self, start: usize, end: usize) {
-        assert!(end <= self.puntos.len());
-        let mut actual_option = self.best_option;
-        let mut distancia: f64;
+        // let mut distancia: f64;
+        for i in start..end {
+            let punto_i = &self.puntos[i];
 
-        let mut points: [usize; 3] = [0, 0, 0];
-
-        for (i, punto_i) in (start..end).zip(self.puntos[start..end].iter()) {
-            for (j, punto_j) in (start..end).zip(self.puntos[start..end].iter()) {
-                let distancia_ij = punto_i.distancia(punto_j);
-                if j == i || distancia_ij >= self.best_option {
+            for j in start..end {
+                if j == i {
                     continue;
                 }
 
-                let iter_k = (i + 1..end)
-                    .zip(self.puntos[i + 1..end].iter())
-                    .filter(|(e, _)| *e != j);
+                let punto_j = &self.puntos[j];
+                let distancia_ij = punto_i.distancia(punto_j);
 
-                for (k, punto_k) in iter_k {
-                    if j == k {
+                if distancia_ij >= self.best_option {
+                    continue;
+                }
+
+                for k in i + 1..end {
+                    if k == j {
                         continue;
                     }
 
-                    distancia = distancia_ij + punto_j.distancia(punto_k);
+                    let punto_k = &self.puntos[k];
+                    let distancia = distancia_ij + punto_j.distancia(punto_k);
 
-                    if distancia < actual_option {
-                        actual_option = distancia;
-                        points = [i, j, k];
+                    if distancia < self.best_option {
+                        self.best_option = distancia;
+                        self.points = [i, j, k];
                     }
                 }
             }
         }
 
+        /*
         if actual_option < self.best_option {
             self.best_option = actual_option;
             self.points = points;
         }
+        */
     }
 
     fn divide_venceras(&mut self, start: f64, end: f64) {
@@ -126,7 +130,6 @@ impl<'a> DyV<'a> {
         if self.best_option < end - start {
             self.recheck_actual_best(end, start);
         } else {
-            self.calcula_fixed(start_index, end_index + 1);
         };
     }
 
@@ -177,7 +180,7 @@ fn write_points(puntos: &[Punto]) {
     }
 }
 
-fn read_points_from_file(file_name: &str) -> Vec<Punto> {
+fn read_points_from_file<I: AsRef<Path>>(file_name: I) -> Vec<Punto> {
     let mut points = Vec::with_capacity(N_POINTS);
     let mut buffer = String::new();
     let mut reader = std::io::BufReader::new(std::fs::File::open(file_name).unwrap());
@@ -200,10 +203,10 @@ fn read_points_from_file(file_name: &str) -> Vec<Punto> {
 }
 
 static N_POINTS: usize = 800_000;
-static MEDIA: u128 = 1;
+static MEDIA: u128 = 20;
 
 #[allow(unused)]
-fn write_points_with_name(name: String, puntos: &[Punto]) {
+fn write_points_with_name<I: AsRef<Path>>(name: I, puntos: &[Punto]) {
     let mut file = std::io::BufWriter::new(std::fs::File::create(name).unwrap());
     file.write_all("NODE_COORD_SECTION\n".as_bytes()).unwrap();
 
@@ -213,22 +216,9 @@ fn write_points_with_name(name: String, puntos: &[Punto]) {
     }
 }
 
-fn main() {
-    /*
-    let mut puntos = genera_random(N_POINTS, 800.0, 0.0);
+fn bench() {
+    let mut puntos = read_points_from_file(PathBuf::from(POINT_FILES).join("puntos_800000.tsp"));
     puntos.sort();
-    write_points(&puntos);
-    */
-
-    for i in 0..10 {
-        let puntos = read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
-        let mut dyv = DyV::new(&puntos);
-        let res = dyv.start();
-        println!("{:?}", res);
-    }
-
-    /*
-    let puntos = read_points_from_file("puntos.tsp");
     println!("GO!");
     let mut media = 0;
     for _ in 0..MEDIA {
@@ -239,16 +229,22 @@ fn main() {
         let end = Instant::now();
 
         println!("{:?}, {:?}", res, dyv.points);
-
-        for index in dyv.points {
-            println!("{:?}", puntos[index]);
-        }
         println!("{}", end.duration_since(start).as_millis());
 
         media += end.duration_since(start).as_millis();
     }
     println!("Media: {} ms", media / MEDIA);
-    */
+}
+
+fn main() {
+    // for i in 0..10 {
+    //     let puntos = read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
+    //     let mut dyv = DyV::new(&puntos);
+    //     let res = dyv.start();
+    //     println!("{:?}", res);
+    // }
+
+    bench()
 }
 
 #[cfg(test)]
@@ -304,13 +300,36 @@ mod tests {
     }
 
     #[test]
-    fn random_tests() {
+    fn random_tests_part_1() {
         let answers = [
             0.08015304030013183,
             0.05353786710188051,
             0.08537619304985208,
             0.05132736906745347,
             0.02924335899771857,
+        ];
+
+        let mut threads = vec![];
+
+        for i in 0..5 {
+            let t = std::thread::spawn(move || {
+                let puntos = read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
+                let mut dyv = DyV::new(&puntos);
+                let res = dyv.start();
+                assert_eq!(res, answers[i]);
+            });
+
+            threads.push(t);
+        }
+
+        for t in threads {
+            t.join().unwrap();
+        }
+    }
+
+    #[test]
+    fn random_tests_part_2() {
+        let answers = [
             0.045820223238880894,
             0.04419541844017895,
             0.0990423678758528,
@@ -318,11 +337,26 @@ mod tests {
             0.033750012246621455,
         ];
 
-        for i in 0..10 {
-            let puntos = read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
-            let mut dyv = DyV::new(&puntos);
-            let res = dyv.start();
-            assert_eq!(res, answers[i]);
+        let mut threads = vec![];
+        for i in 5..10 {
+            threads.push(std::thread::spawn(move || {
+                let puntos = read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
+                let mut dyv = DyV::new(&puntos);
+                let res = dyv.start();
+                assert_eq!(res, answers[i - 5]);
+            }));
         }
+
+        threads.into_iter().for_each(|t| {
+            t.join().unwrap();
+        });
+    }
+
+    #[test]
+    fn d657() {
+        let puntos = read_points_from_file("point_files/d657.tsp");
+        let mut dyv = DyV::new(&puntos);
+        let res = dyv.start();
+        assert_eq!(res, 35.9210244842761);
     }
 }
