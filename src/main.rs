@@ -1,72 +1,39 @@
 use rand::Rng;
+mod coord;
+mod punto;
 
-const FIXED_POINTS: usize = 45;
+use coord::Coord;
+use punto::*;
+
+const FIXED_POINTS: usize = 126;
 const POINT_FILES: &str = "point_files/";
+const CACHE_CAPACITY: usize = 24599;
 
 use std::{
-    cmp::Ordering,
+    collections::{BTreeMap, HashMap},
     io::{BufRead, Write},
     path::{Path, PathBuf},
     time::Instant,
 };
 
 const MAX: f64 = f64::MAX;
-
-#[derive(Clone, Debug, Default, Copy)]
-struct Punto {
-    pub x: f64,
-    pub y: f64,
-}
-
-type BestPoint = f64;
-
-impl Punto {
-    #[inline]
-    fn distancia(&self, a: &Punto) -> f64 {
-        ((a.x - self.x).powi(2) + (a.y - self.y).powi(2)).sqrt()
-    }
-
-    #[allow(unused)]
-    #[inline]
-    pub fn distancia3(&self, a: &Punto, b: &Punto) -> f64 {
-        self.distancia(a) + self.distancia(b)
-    }
-}
-
-impl PartialOrd for Punto {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.x.partial_cmp(&other.x)
-    }
-}
-
-impl PartialEq for Punto {
-    fn eq(&self, other: &Self) -> bool {
-        self.x == other.x
-    }
-}
-
-impl Eq for Punto {}
-
-impl Ord for Punto {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.x.total_cmp(&other.x)
-    }
-}
-
 struct DyV<'a> {
     puntos: &'a [Punto],
     best_option: BestPoint,
     points: [usize; 3],
-    fixed_points: usize,
+    pub fixed_points: usize,
+    pub cache: HashMap<Coord, (usize, usize)>,
 }
 
 impl<'a> DyV<'a> {
+    #[allow(unused)]
     pub fn new_with_fixed(puntos: &'a [Punto], fixed_points: usize) -> DyV {
         DyV {
             puntos,
             best_option: MAX,
             points: [0; 3],
             fixed_points,
+            cache: HashMap::with_capacity(28672),
         }
     }
 
@@ -77,11 +44,17 @@ impl<'a> DyV<'a> {
             best_option: MAX,
             points: [0; 3],
             fixed_points: FIXED_POINTS,
+            cache: HashMap::with_capacity(28672),
         }
     }
 
     pub fn start(&mut self) -> BestPoint {
-        self.divide_venceras(self.puntos[0].x, self.puntos[self.puntos.len() - 1].x, 0, &self.puntos);
+        self.divide_venceras(
+            self.puntos[0].x,
+            self.puntos[self.puntos.len() - 1].x,
+            0,
+            &self.puntos,
+        );
 
         self.best_option
     }
@@ -126,6 +99,7 @@ impl<'a> DyV<'a> {
             return;
         }
 
+        assert!(end_index <= self.puntos.len());
         let slice = &self.puntos[start_index..end_index];
 
         let mitad: f64 = (start + end) / 2.0;
@@ -148,20 +122,26 @@ impl<'a> DyV<'a> {
         self.calcula_fixed(new_start, new_end + 1);
     }
 
-    fn get_points_between(&self, start: f64, end: f64, puntos: &[Punto]) -> (usize, usize) {
-        let start_index = match puntos
-            .binary_search_by(|p| p.x.partial_cmp(&start).unwrap())
-        {
+    fn get_points_between(&mut self, start: f64, end: f64, puntos: &[Punto]) -> (usize, usize) {
+
+
+        
+        let c = Coord{x: start, y: end};
+        if self.cache.contains_key(&c) {
+            return self.cache.get(&c).unwrap().clone();
+        }
+
+        let start_index = match puntos.binary_search_by(|p| p.x.partial_cmp(&start).unwrap()) {
             Ok(index) => index,
             Err(index) => index,
         };
-        let end_index = match puntos
-            .binary_search_by(|p| p.x.partial_cmp(&end).unwrap())
-        {
+        let end_index = match puntos.binary_search_by(|p| p.x.partial_cmp(&end).unwrap()) {
             Ok(index) => index,
             Err(index) => index - 1,
         };
-        (start_index, end_index)
+
+        self.cache.insert(c, (start_index, end_index));
+        return (start_index, end_index);
     }
 }
 
@@ -211,7 +191,7 @@ fn read_points_from_file<I: AsRef<Path>>(file_name: I) -> Vec<Punto> {
 }
 
 static N_POINTS: usize = 800_000;
-static MEDIA: u128 = 1;
+static MEDIA: u128 = 10;
 
 #[allow(unused)]
 fn write_points_with_name<I: AsRef<Path>>(name: I, puntos: &[Punto]) {
@@ -229,11 +209,10 @@ fn bench() {
     puntos.sort();
     println!("GO!");
     let mut media;
-    for points in (30..=45).step_by(3) {
+    for points in (99..=150).step_by(3) {
         media = 0;
         for _ in 0..MEDIA {
-            let mut dyv = DyV::new_with_fixed(&puntos, points);
-
+            let mut dyv = DyV::new(&puntos);
             let start = Instant::now();
             let res = dyv.start();
             let end = Instant::now();
