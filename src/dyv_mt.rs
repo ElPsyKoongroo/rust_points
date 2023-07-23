@@ -38,8 +38,6 @@ impl<'a> DyVMT<'a> {
 
     pub fn start(&mut self) -> BestPoint {
         let size = self.puntos.len();
-        //let mitad_index = size / 2;
-
         let mitad: f64 = (self.puntos[0].x + self.puntos[size-1].x) / 2.0;
 
         let mitad_index = match self.puntos.binary_search_by(|p| p.x.partial_cmp(&mitad).unwrap()) {
@@ -75,6 +73,8 @@ impl<'a> DyVMT<'a> {
 
     fn calcula_fixed(&self, start: usize, end: usize) {
         let mut best_option_cache = *self.best_option.read().unwrap();
+        let mut points = [0,0,0];
+
         for i in start..end {
             let punto_i = &self.puntos[i];
 
@@ -94,15 +94,19 @@ impl<'a> DyVMT<'a> {
                     let punto_k = &self.puntos[k];
                     let distancia = distancia_ij + punto_j.distancia(punto_k);
 
-                    let mut best_option_lock = self.best_option.write().unwrap();
-                    let mut best_points_lock = self.points.write().unwrap();
-                    if distancia < *best_option_lock {
-                        *best_option_lock = distancia;
+                    //let mut best_option_lock = self.best_option.write().unwrap();
+                    if distancia < best_option_cache {
                         best_option_cache = distancia;
-                        *best_points_lock = [i, j, k];
+                        points = [i, j, k];
                     }
                 }
             }
+        }
+        *self.points.write().unwrap() = points;
+
+        let mut best_option_lock = self.best_option.write().unwrap();
+        if best_option_cache < *best_option_lock{
+            *best_option_lock = best_option_cache;
         }
     }
 

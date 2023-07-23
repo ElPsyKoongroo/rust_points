@@ -75,11 +75,11 @@ fn write_points_with_name<I: AsRef<Path>>(name: I, puntos: &[Punto]) {
 }
 
 fn bench() {
-    let mut puntos = read_points_from_file(PathBuf::from(POINT_FILES).join("puntos_big_2m.tsp"));
+    let mut puntos = read_points_from_file(PathBuf::from(POINT_FILES).join("puntos_800000.tsp"));
     puntos.sort();
     println!("GO!");
     let mut media;
-    for points in 1..2 {
+    for points in 1..5 {
         media = 0;
         for _ in 0..MEDIA {
             let mut dyv = DyVMT::new(&puntos);
@@ -88,7 +88,6 @@ fn bench() {
             let end = Instant::now();
 
             media += end.duration_since(start).as_millis();
-            println!("{}", res);
         }
         println!("Media: {} ms with {}", media / MEDIA, points);
     }
