@@ -133,10 +133,6 @@ impl<'a> DyVMT<'a> {
         // let offset = start_index + offset;
         self.divide_venceras(start, mitad, offset, &s_slice[start_index..mitad_index]);
 
-        if mitad_index >= s_slice.len() {
-            println!("cagamos");
-        }
-
         self.divide_venceras(
             mitad,
             end,
