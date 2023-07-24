@@ -83,14 +83,17 @@ fn bench() {
     for points in 1..5 {
         media = 0;
         for _ in 0..MEDIA {
-            let mut dyv = DyVMT::new(&puntos);
+            let mut dyv = DyV::new(&puntos);
             let start = Instant::now();
             let res = dyv.start();
             //let points = dyv.get_points();
             let end = Instant::now();
 
-            media += end.duration_since(start).as_millis();
-            println!("{res}, {:?}", points);
+            let actual = end.duration_since(start).as_millis();
+            println!("\t{}ms", actual);
+
+            media += actual;
+            //println!("{res}, {:?}", points);
         }
         println!("Media: {} ms with {}", media / MEDIA, points);
     }
@@ -105,12 +108,15 @@ fn genera_puntos_file() {
 }
 
 fn main() {
+    
+    /*
     for i in 0..10 {
-        let puntos = read_points_from_file(&format!("point_files/puntos_rand_small_{}.tsp", i));
+        let puntos = read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
         let mut dyv = DyV::new(&puntos);
         let res = dyv.start();
-        println!("{:?}", res);
+        println!("{:?}", dyv.get_points());
     }
+    */
 
-    bench()
+     bench()
 }

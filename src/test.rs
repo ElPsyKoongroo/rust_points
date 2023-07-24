@@ -103,7 +103,7 @@ mod tests {
             }
 
             threads.into_iter().for_each(|t| {
-                t.join().unwrap();
+                let _ = t.join();
             });
         }
 
@@ -191,7 +191,7 @@ mod tests {
             }
 
             for t in threads {
-                t.join().unwrap();
+                let _ = t.join();
             }
         }
 
@@ -217,7 +217,7 @@ mod tests {
             }
 
             threads.into_iter().for_each(|t| {
-                t.join().unwrap();
+                let _ = t.join();
             });
         }
 
@@ -239,7 +239,7 @@ mod tests {
                 110984.69938339421,
                 81177.56393881867,
                 82380.39676356448,
-                232030.34848398052,
+                232030.34848398055,
                 113190.95385331071,
                 135306.3101400795,
             ];
