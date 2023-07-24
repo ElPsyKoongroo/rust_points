@@ -89,10 +89,10 @@ impl<'a> DyV<'a> {
         assert!(end_index <= self.puntos.len());
 
         let mitad: f64 = (start + end) / 2.0;
-        let mitad_index = match s_slice.binary_search_by(|p| p.x.partial_cmp(&mitad).unwrap()) {
+        let mitad_index = (end_index - start_index) / 2; /* match s_slice.binary_search_by(|p| p.x.partial_cmp(&mitad).unwrap()) {
             Ok(index) => index,
             Err(index) => index,
-        };
+        }; */
 
         // let offset = start_index + offset;
         self.divide_venceras(start, mitad, offset, &s_slice[start_index..mitad_index]);

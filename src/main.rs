@@ -83,10 +83,10 @@ fn bench() {
     for points in 1..5 {
         media = 0;
         for _ in 0..MEDIA {
-            let mut dyv = DyVMT::new(&puntos);
+            let mut dyv = DyV::new(&puntos);
             let start = Instant::now();
             let res = dyv.start();
-            let points = dyv.get_points();
+            //let points = dyv.get_points();
             let end = Instant::now();
 
             media += end.duration_since(start).as_millis();
