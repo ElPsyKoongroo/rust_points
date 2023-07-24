@@ -83,7 +83,7 @@ fn bench() {
     for points in 1..5 {
         media = 0;
         for _ in 0..MEDIA {
-            let mut dyv = DyV::new(&puntos);
+            let mut dyv = DyVMT::new(&puntos);
             let start = Instant::now();
             let res = dyv.start();
             //let points = dyv.get_points();
@@ -96,15 +96,21 @@ fn bench() {
     }
 }
 
+fn genera_puntos_file() {
+    for i in 0..10 {
+        let mut puntos = genera_random(1_000, 10_000_000.1, -10_000_000.0);
+        puntos.sort();
+        write_points_with_name(format!("point_files/puntos_rand_small_{}.tsp", i), &puntos);
+    }
+}
+
 fn main() {
-    // for i in 0..10 {
-    //     let puntos = read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
-    //     let mut dyv = DyV::new(&puntos);
-    //     let res = dyv.start();
-    //     println!("{:?}", res);
-    // }
+    for i in 0..10 {
+        let puntos = read_points_from_file(&format!("point_files/puntos_rand_small_{}.tsp", i));
+        let mut dyv = DyV::new(&puntos);
+        let res = dyv.start();
+        println!("{:?}", res);
+    }
 
     bench()
 }
-
-

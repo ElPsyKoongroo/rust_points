@@ -34,12 +34,7 @@ impl<'a> DyV<'a> {
     }
 
     pub fn start(&mut self) -> BestPoint {
-        self.divide_venceras(
-            self.puntos[0].x,
-            self.puntos[self.puntos.len() - 1].x,
-            0,
-            &self.puntos,
-        );
+        self.divide_venceras(0, &self.puntos);
 
         self.best_option
     }
@@ -76,7 +71,7 @@ impl<'a> DyV<'a> {
         }
     }
 
-    fn divide_venceras(&mut self, start: f64, end: f64, offset: usize, s_slice: &[Punto]) {
+    fn divide_venceras(&mut self, offset: usize, s_slice: &[Punto]) {
         // let (mut start_index, mut end_index) = self.get_points_between(start, end, s_slice);
 
         let start_index = 0;
@@ -86,28 +81,17 @@ impl<'a> DyV<'a> {
             return self.calcula_fixed(offset, end_index + offset + 1);
         }
 
-        assert!(end_index <= self.puntos.len());
+        //assert!(end_index <= self.puntos.len());
 
-        let mitad: f64 = (start + end) / 2.0;
-        let mitad_index = (end_index - start_index) / 2; /* match s_slice.binary_search_by(|p| p.x.partial_cmp(&mitad).unwrap()) {
-            Ok(index) => index,
-            Err(index) => index,
-        }; */
+        let mitad_index = (end_index - start_index) / 2;
+        self.divide_venceras(offset, &s_slice[start_index..mitad_index]);
+        self.divide_venceras(mitad_index + offset, &s_slice[mitad_index..end_index]);
 
-        // let offset = start_index + offset;
-        self.divide_venceras(start, mitad, offset, &s_slice[start_index..mitad_index]);
-        self.divide_venceras(
-            mitad,
-            end,
-            mitad_index + offset,
-            &s_slice[mitad_index..end_index],
-        );
-
-        self.recheck_actual_best(end, start, offset, s_slice);
+        self.recheck_actual_best(offset, s_slice);
     }
 
-    fn recheck_actual_best(&mut self, end: f64, start: f64, offset: usize, s_slice: &[Punto]) {
-        let mitad: f64 = (start + end) / 2.0;
+    fn recheck_actual_best(&mut self, offset: usize, s_slice: &[Punto]) {
+        let mitad = s_slice[((s_slice.len() - 1) / 2)].x; //f64 = (start + end) / 2.0;
         let (mut new_start, mut new_end) =
             self.get_points_between(mitad - self.best_option, mitad + self.best_option, s_slice);
 
@@ -130,5 +114,3 @@ impl<'a> DyV<'a> {
         return (start_index, end_index);
     }
 }
-
-

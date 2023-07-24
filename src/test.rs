@@ -228,5 +228,28 @@ mod tests {
             let res = dyv.start();
             assert_eq!(res, 35.9210244842761);
         }
+
+        #[test]
+        fn small_tests() {
+            let answers = [
+                73498.11815595091,
+                128619.57413192868,
+                166528.24868796268,
+                138966.38577736917,
+                110984.69938339421,
+                81177.56393881867,
+                82380.39676356448,
+                232030.34848398052,
+                113190.95385331071,
+                135306.3101400795,
+            ];
+
+            for i in 0..10 {
+                let puntos = read_points_from_file(&format!("point_files/puntos_rand_small_{}.tsp", i));
+                let mut dyv = DyV::new(&puntos);
+                let res = dyv.start();
+                assert_eq!(res, answers[i]);
+            }
+        }
     }
 }

@@ -80,14 +80,14 @@ impl<'a> DyVMT<'a> {
         );
         */
 
-        let best = *self.best_option.try_read().unwrap();
+        let best = *self.best_option.read().unwrap();
         self.recheck_actual_best(
             self.puntos[mitad_index].x + best,
             self.puntos[mitad_index].x - best,
             0,
             self.puntos,
         );
-        *self.best_option.try_read().unwrap()
+        *self.best_option.read().unwrap()
     }
 
     fn calcula_fixed(&self, start: usize, end: usize) {
