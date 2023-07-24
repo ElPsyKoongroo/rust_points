@@ -51,10 +51,12 @@ impl<'a> DyV<'a> {
             for j in (start..i).chain(i + 1..end) {
                 let punto_j = &self.puntos[j];
                 let distancia_ij = punto_i.distancia(punto_j);
+                let mut mejor = self.best_option - distancia_ij;
 
-                if distancia_ij >= self.best_option {
+                if mejor >= self.best_option {
                     continue;
                 }
+
 
                 for k in i + 1..end {
                     if k == j {
@@ -62,13 +64,14 @@ impl<'a> DyV<'a> {
                     }
 
                     let punto_k = &self.puntos[k];
-                    let distancia = distancia_ij + punto_j.distancia(punto_k);
+                    let distancia_jk = punto_j.distancia(punto_k);
 
-                    if distancia < self.best_option {
-                        self.best_option = distancia;
+                    if distancia_jk < mejor {
+                        mejor = distancia_jk;
                         self.points = [i, j, k];
                     }
                 }
+                self.best_option = mejor + distancia_ij;
             }
         }
     }

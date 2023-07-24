@@ -38,21 +38,33 @@ impl<'a> DyVMT<'a> {
 
     pub fn start(&mut self) -> BestPoint {
         let size = self.puntos.len();
-        let mitad: f64 = (self.puntos[0].x + self.puntos[size-1].x) / 2.0;
+        let mitad: f64 = (self.puntos[0].x + self.puntos[size - 1].x) / 2.0;
 
-        let mitad_index = match self.puntos.binary_search_by(|p| p.x.partial_cmp(&mitad).unwrap()) {
+        let mitad_index = match self
+            .puntos
+            .binary_search_by(|p| p.x.partial_cmp(&mitad).unwrap())
+        {
             Ok(index) => index,
-            Err(index) => index-1,
+            Err(index) => index - 1,
         };
-
 
         std::thread::scope(|s| {
             let a = s.spawn(|| {
-                self.divide_venceras(self.puntos[0].x, self.puntos[mitad_index-1].x, 0, &self.puntos[0..mitad_index])
+                self.divide_venceras(
+                    self.puntos[0].x,
+                    self.puntos[mitad_index - 1].x,
+                    0,
+                    &self.puntos[0..mitad_index],
+                )
             });
 
             let b = s.spawn(|| {
-                self.divide_venceras(self.puntos[mitad_index].x, self.puntos[size-1].x, mitad_index, &self.puntos[mitad_index..size-1])
+                self.divide_venceras(
+                    self.puntos[mitad_index].x,
+                    self.puntos[size - 1].x,
+                    mitad_index,
+                    &self.puntos[mitad_index..size - 1],
+                )
             });
 
             let _ = b.join();
@@ -68,12 +80,15 @@ impl<'a> DyVMT<'a> {
         );
         */
 
+        
+        let best = *self.best_option.try_read().unwrap();
+        self.recheck_actual_best(self.puntos[mitad_index].x + best, self.puntos[mitad_index].x - best, 0, self.puntos);
         *self.best_option.try_read().unwrap()
     }
 
     fn calcula_fixed(&self, start: usize, end: usize) {
         let mut best_option_cache = *self.best_option.read().unwrap();
-        let mut points = [0,0,0];
+        let mut points = [0, 0, 0];
 
         for i in start..end {
             let punto_i = &self.puntos[i];
@@ -102,11 +117,11 @@ impl<'a> DyVMT<'a> {
                 }
             }
         }
-        *self.points.write().unwrap() = points;
 
         let mut best_option_lock = self.best_option.write().unwrap();
-        if best_option_cache < *best_option_lock{
+        if best_option_cache < *best_option_lock {
             *best_option_lock = best_option_cache;
+            *self.points.write().unwrap() = points;
         }
     }
 
@@ -125,9 +140,7 @@ impl<'a> DyVMT<'a> {
         let mitad: f64 = (start + end) / 2.0;
         let mitad_index = match s_slice.binary_search_by(|p| p.x.partial_cmp(&mitad).unwrap()) {
             Ok(index) => index,
-            Err(index) => { 
-                index-1
-            },
+            Err(index) => index - 1,
         };
 
         // let offset = start_index + offset;
@@ -146,13 +159,10 @@ impl<'a> DyVMT<'a> {
     fn recheck_actual_best(&self, end: f64, start: f64, offset: usize, s_slice: &[Punto]) {
         let mitad: f64 = (start + end) / 2.0;
         let best_option = *self.best_option.read().unwrap();
-        let (mut new_start, mut new_end) =
+        let (new_start, new_end) =
             self.get_points_between(mitad - best_option, mitad + best_option, s_slice);
 
-        new_start += offset;
-        new_end += offset;
-
-        self.calcula_fixed(new_start, new_end + 1);
+        self.calcula_fixed(new_start + offset, new_end + offset + 1);
     }
 
     fn get_points_between(&self, start: f64, end: f64, puntos: &[Punto]) -> (usize, usize) {
@@ -166,5 +176,10 @@ impl<'a> DyVMT<'a> {
         };
 
         return (start_index, end_index);
+    }
+
+    pub fn get_points(&self) -> [usize; 3] {
+        *self.points.read().unwrap()
+        
     }
 }

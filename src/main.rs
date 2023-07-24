@@ -85,9 +85,11 @@ fn bench() {
             let mut dyv = DyVMT::new(&puntos);
             let start = Instant::now();
             let res = dyv.start();
+            let points = dyv.get_points();
             let end = Instant::now();
 
             media += end.duration_since(start).as_millis();
+            println!("{res}, {:?}", points);
         }
         println!("Media: {} ms with {}", media / MEDIA, points);
     }
