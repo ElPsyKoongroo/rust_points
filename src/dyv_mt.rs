@@ -80,9 +80,13 @@ impl<'a> DyVMT<'a> {
         );
         */
 
-        
         let best = *self.best_option.try_read().unwrap();
-        self.recheck_actual_best(self.puntos[mitad_index].x + best, self.puntos[mitad_index].x - best, 0, self.puntos);
+        self.recheck_actual_best(
+            self.puntos[mitad_index].x + best,
+            self.puntos[mitad_index].x - best,
+            0,
+            self.puntos,
+        );
         *self.best_option.try_read().unwrap()
     }
 
@@ -101,20 +105,21 @@ impl<'a> DyVMT<'a> {
                     continue;
                 }
 
+                let mut mejor = best_option_cache - distancia_ij;
                 for k in i + 1..end {
                     if k == j {
                         continue;
                     }
 
                     let punto_k = &self.puntos[k];
-                    let distancia = distancia_ij + punto_j.distancia(punto_k);
+                    let distancia_jk = punto_j.distancia(punto_k);
 
-                    //let mut best_option_lock = self.best_option.write().unwrap();
-                    if distancia < best_option_cache {
-                        best_option_cache = distancia;
+                    if distancia_jk < mejor {
+                        mejor = distancia_jk;
                         points = [i, j, k];
                     }
                 }
+                best_option_cache = distancia_ij + mejor;
             }
         }
 
@@ -180,6 +185,5 @@ impl<'a> DyVMT<'a> {
 
     pub fn get_points(&self) -> [usize; 3] {
         *self.points.read().unwrap()
-        
     }
 }
