@@ -1,6 +1,6 @@
 use crate::punto::*;
 
-const FIXED_POINTS: usize = 126;
+const FIXED_POINTS: usize = 180;
 const MAX: f64 = f64::MAX;
 
 #[allow(unused)]
@@ -43,15 +43,13 @@ impl<'a> DyV<'a> {
         for i in start..end {
             let punto_i = &self.puntos[i];
 
-            for j in (start..i).chain(i + 1..end) {
+            for j in i + 1..end {
                 let punto_j = &self.puntos[j];
 
-                
-                
                 if (punto_j.y - punto_i.y).abs() >= self.best_option {
                     continue;
                 }
-                
+
                 let distancia_ij = punto_i.distancia(punto_j);
 
                 if distancia_ij >= self.best_option {
@@ -60,17 +58,45 @@ impl<'a> DyV<'a> {
 
                 let mut mejor = self.best_option - distancia_ij;
 
+                for k in i + 1..end {
+                    if k == j {
+                        continue;
+                    }
+
+                    let punto_k = &self.puntos[k];
+
+                    if (punto_k.y - punto_j.y).abs() >= self.best_option  || (punto_k.y - punto_i.y).abs() >= self.best_option {
+                        continue;
+                    }
+
+                    let distancia_ijk = distancia_ij + punto_j.distancia(punto_k);
+                    let distancia_jik = distancia_ij + punto_i.distancia(punto_k);
+
+                    if distancia_jik < self.best_option || distancia_ijk < self.best_option {
+                        if distancia_jik < distancia_ijk {
+                            self.best_option = distancia_jik;
+                            self.points = [j, i, k];
+                        } else {
+                            self.best_option = distancia_ijk;
+                            self.points = [i, j, k];
+                        }
+                    }
+                }
+
+                /*
                 let best_jk = (i + 1..end)
                     .filter(|&n| n != j)
                     .map(|k| (punto_j.distancia(&self.puntos[k]), k))
                     .min_by(|a, b| a.0.total_cmp(&b.0))
                     .unwrap_or_else(|| (f64::MAX, 0));
 
+
                 if best_jk.0 < mejor {
                     //mejor = best_jk;
                     self.best_option = distancia_ij + best_jk.0;
                     self.points = [i, j, best_jk.1];
                 }
+                */
             }
         }
     }

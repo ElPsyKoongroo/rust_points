@@ -93,7 +93,7 @@ fn write_points_with_name<I: AsRef<Path>>(name: I, puntos: &[Punto]) {
 }
 
 fn bench() {
-    let mut puntos = read_points_from_file(PathBuf::from(POINT_FILES).join("puntos_800000.tsp"));
+    let mut puntos = read_points_from_file(PathBuf::from(POINT_FILES).join("puntos_big_2m.tsp"));
     puntos.sort();
     println!("GO!");
     let mut media;
