@@ -45,6 +45,13 @@ impl<'a> DyV<'a> {
 
             for j in (start..i).chain(i + 1..end) {
                 let punto_j = &self.puntos[j];
+
+                
+                
+                if (punto_j.y - punto_i.y).abs() >= self.best_option {
+                    continue;
+                }
+                
                 let distancia_ij = punto_i.distancia(punto_j);
 
                 if distancia_ij >= self.best_option {
@@ -88,12 +95,26 @@ impl<'a> DyV<'a> {
     }
 
     fn recheck_actual_best(&mut self, offset: usize, s_slice: &[Punto], mitad: f64) {
-        let (mut new_start, mut new_end) =
+        let (new_start, new_end) =
             self.get_points_between(mitad - self.best_option, mitad + self.best_option, s_slice);
 
+        if new_end - new_start > FIXED_POINTS {
+            let mitad_index = (s_slice.len() - 1) / 2;
+            self.divide_venceras(offset, &s_slice[new_start..mitad_index]);
+            self.divide_venceras(mitad_index + offset, &s_slice[mitad_index..new_end]);
 
+            let (new_start, new_end) = self.get_points_between(
+                mitad - self.best_option,
+                mitad + self.best_option,
+                s_slice,
+            );
+
+            self.calcula_fixed(new_start + offset, new_end + offset + 1);
+            return;
+        }
+        self.calcula_fixed(new_start + offset, new_end + offset + 1);
+        /*
         if new_end - new_start >= FIXED_POINTS {
-            let mitad = (s_slice.len()-1) / 2;
             self.divide_venceras(offset, &s_slice[new_start..mitad]);
             self.divide_venceras(mitad + offset, &s_slice[mitad..new_end]);
         } else {
@@ -101,6 +122,7 @@ impl<'a> DyV<'a> {
             new_end += offset;
             self.calcula_fixed(new_start, new_end + 1);
         }
+            */
     }
 
     fn get_points_between(&mut self, start: f64, end: f64, puntos: &[Punto]) -> (usize, usize) {

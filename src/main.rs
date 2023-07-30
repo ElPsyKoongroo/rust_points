@@ -29,6 +29,23 @@ fn genera_random(num_puntos: usize, upper_bound: f64, lower_bound: f64) -> Vec<P
 }
 
 #[allow(unused)]
+fn genera_random_with_dost<I: rand::distributions::Distribution<f64>>(
+    dist: I,
+    num_puntos: usize,
+    upper_bound: f64,
+    lower_bound: f64,
+) -> Vec<Punto> {
+    let mut puntos = Vec::with_capacity(num_puntos);
+    for _ in 0..num_puntos {
+        let mut rng = rand::thread_rng();
+        let x: f64 = dist.sample(&mut rng);
+        let y: f64 = dist.sample(&mut rng);
+        puntos.push(Punto { x, y })
+    }
+    puntos
+}
+
+#[allow(unused)]
 fn write_points(puntos: &[Punto]) {
     let mut file = std::io::BufWriter::new(std::fs::File::create("puntos.tsp").unwrap());
     file.write_all("NODE_COORD_SECTION\n".as_bytes()).unwrap();
@@ -90,7 +107,7 @@ fn bench() {
             let end = Instant::now();
 
             let actual = end.duration_since(start).as_millis();
-            println!("\t{}ms", actual);
+            println!("\t{}ms {:?}", actual, dyv.get_points());
 
             media += actual;
             //println!("{res}, {:?}", points);
@@ -100,15 +117,29 @@ fn bench() {
 }
 
 fn genera_puntos_file() {
-    for i in 0..10 {
-        let mut puntos = genera_random(1_000, 10_000_000.1, -10_000_000.0);
+    let mut rng = rand::thread_rng();
+    for i in 0..25 {
+        let n_points = rng.gen::<usize>() % 50_000 + 100_000;
+        let dist = rand::distributions::Uniform::new(10_000_000.1, 10_000_000.1);
+        let mut puntos = genera_random_with_dost(dist, n_points, 10_000_000.1, -10_000_000.0);
+        puntos.sort();
+        write_points_with_name(format!("point_files/puntos_rand_small_{}.tsp", i), &puntos);
+    }
+
+    let dist = rand::distributions::Uniform::new(10_000_000.1, 10_000_000.1);
+    let mut puntos = genera_random_with_dost(dist, 50_000, 10_000_000.1, -10_000_000.0);
+    puntos.sort();
+
+    for i in 25..50 {
+        let n_points = rng.gen::<usize>() % 1_000 + 500;
+        let dist = rand::distributions::Uniform::new(10_000_000.1, 10_000_000.1);
+        let mut puntos = genera_random_with_dost(dist, n_points, 10_000_000.1, -10_000_000.0);
         puntos.sort();
         write_points_with_name(format!("point_files/puntos_rand_small_{}.tsp", i), &puntos);
     }
 }
 
 fn main() {
-    
     /*
     for i in 0..10 {
         let puntos = read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
@@ -118,5 +149,5 @@ fn main() {
     }
     */
 
-     bench()
+    bench()
 }
