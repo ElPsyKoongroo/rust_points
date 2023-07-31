@@ -107,7 +107,7 @@ fn bench() {
             let end = Instant::now();
 
             let actual = end.duration_since(start).as_millis();
-            println!("\t{}ms {:?}", actual, dyv.get_points());
+            println!("\t{}ms {:?} {}", actual, dyv.get_points(), res);
 
             media += actual;
             //println!("{res}, {:?}", points);

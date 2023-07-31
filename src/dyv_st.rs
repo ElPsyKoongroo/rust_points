@@ -64,13 +64,11 @@ impl<'a> DyV<'a> {
 
                 let mut mejor = self.best_option - distancia_ij;
 
-                for punto_k in slice.iter().skip(i+1) {
+                for punto_k in slice.iter().skip(i+1).filter(|&punto_k| punto_k != punto_j) {
                     k += 1;
-                    #[cold]
-                    if punto_k == punto_j{
-                        
-                        continue;
-                    }
+                    // if punto_k == punto_j {
+                    //     continue;
+                    // }
 
                     //let punto_k = &self.puntos[k];
 
@@ -86,17 +84,12 @@ impl<'a> DyV<'a> {
                     if distancia_jk < mejor {
                         distancia_jk += distancia_ij;
                         self.best_option = distancia_jk;
-                        self.points[0] = i+start;
-                        self.points[1] = j+i;
-                        self.points[2] = k+i;
+                        self.points = [i+start, j+i, k+i];
                     }
 
                     if distancia_jik < self.best_option {
                         self.best_option = distancia_jik;
-                        
-                        self.points[0] = j+i;
-                        self.points[1] = i;
-                        self.points[2] = k+i;
+                        self.points = [j+i, i, k+i];
                     }
                 }
 
