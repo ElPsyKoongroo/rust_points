@@ -11,7 +11,12 @@ pub type BestPoint = f64;
 impl Punto {
     #[inline]
     pub fn distancia(&self, a: &Punto) -> f64 {
+        let diff_x = (a.x - self.x) * (a.x - self.x);
+        let diff_y = (a.y - self.y) * (a.y - self.y);
+        (diff_x+diff_y).sqrt()
+        /*
         ((a.x - self.x).powi(2) + (a.y - self.y).powi(2)).sqrt()
+        */
     }
 
     #[allow(unused)]
