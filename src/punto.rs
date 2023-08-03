@@ -24,6 +24,10 @@ impl Punto {
     pub fn distancia3(&self, a: &Punto, b: &Punto) -> f64 {
         self.distancia(a) + self.distancia(b)
     }
+
+    pub fn total_cmp(&self, other: &Punto) -> bool {
+        self.x == other.x && self.y == other.y
+    }
 }
 
 impl PartialOrd for Punto {

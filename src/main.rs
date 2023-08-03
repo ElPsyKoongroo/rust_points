@@ -140,14 +140,16 @@ fn genera_puntos_file() {
 }
 
 fn main() {
+    
     /*
     for i in 0..10 {
-        let puntos = read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
+        let puntos = read_points_from_file(&format!("point_files/puntos_rand_small_{}.tsp", i));
         let mut dyv = DyV::new(&puntos);
         let res = dyv.start();
-        println!("{:?}", dyv.get_points());
+        println!("{:?}, {}", dyv.get_points(), res);
     }
-    */
+    */ 
+
 
     bench()
 }
