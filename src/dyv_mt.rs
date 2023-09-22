@@ -180,7 +180,7 @@ impl<'a> DyVMT<'a> {
             Err(index) => index - 1,
         };
 
-        return (start_index, end_index);
+        (start_index, end_index)
     }
 
     pub fn get_points(&self) -> [usize; 3] {

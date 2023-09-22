@@ -1,3 +1,4 @@
+#![warn(clippy::all)]
 use rand::Rng;
 mod coord;
 mod dyv_mt;
@@ -5,6 +6,7 @@ mod dyv_st;
 mod punto;
 mod test;
 
+#[allow(unused_imports)]
 use dyv_mt::DyVMT;
 use dyv_st::DyV;
 use punto::*;
@@ -79,7 +81,7 @@ fn read_points_from_file<I: AsRef<Path>>(file_name: I) -> Vec<Punto> {
 }
 
 static N_POINTS: usize = 800_000;
-static MEDIA: u128 = 10;
+static MEDIA: u128 = 30;
 
 #[allow(unused)]
 fn write_points_with_name<I: AsRef<Path>>(name: I, puntos: &[Punto]) {
@@ -97,17 +99,16 @@ fn bench() {
     puntos.sort();
     println!("GO!");
     let mut media;
-    for points in 1..5 {
+    for points in 1..=5 {
         media = 0;
         for _ in 0..MEDIA {
             let mut dyv = DyV::new(&puntos);
             let start = Instant::now();
             let res = dyv.start();
-            //let points = dyv.get_points();
             let end = Instant::now();
 
             let actual = end.duration_since(start).as_millis();
-            println!("\t{}ms {:?} {}", actual, dyv.get_points(), res);
+            println!("\t{} ms {:?} {}", actual, dyv.get_points(), res);
 
             media += actual;
             //println!("{res}, {:?}", points);
@@ -116,6 +117,7 @@ fn bench() {
     }
 }
 
+#[allow(dead_code)]
 fn genera_puntos_file() {
     let mut rng = rand::thread_rng();
     for i in 0..25 {
@@ -140,7 +142,6 @@ fn genera_puntos_file() {
 }
 
 fn main() {
-    
     /*
     for i in 0..10 {
         let puntos = read_points_from_file(&format!("point_files/puntos_rand_small_{}.tsp", i));
@@ -148,8 +149,7 @@ fn main() {
         let res = dyv.start();
         println!("{:?}, {}", dyv.get_points(), res);
     }
-    */ 
-
+    */
 
     bench()
 }

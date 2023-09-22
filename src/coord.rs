@@ -35,7 +35,7 @@ impl PartialOrd for Coord {
 
 impl PartialEq for Coord {
     fn eq(&self, other: &Self) -> bool {
-        return self.distancia(other) == 0.0
+        self.distancia(other) == 0.0
     }
 }
 
@@ -43,7 +43,7 @@ impl Eq for Coord {}
 
 impl Ord for Coord {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(&other).unwrap()
+        self.partial_cmp(other).unwrap()
     }
 }
 
