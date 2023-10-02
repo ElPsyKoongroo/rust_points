@@ -11,10 +11,13 @@ use dyv_mt::DyVMT;
 use dyv_st::DyV;
 use punto::*;
 
+static N_POINTS: usize = 800_000;
+static MEDIA: u128 = 30;
 const POINT_FILES: &str = "point_files/";
 
 use std::{
-    io::{BufRead, Write},
+    fs::File,
+    io::{BufRead, BufWriter, Write},
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -49,7 +52,7 @@ fn genera_random_with_dost<I: rand::distributions::Distribution<f64>>(
 
 #[allow(unused)]
 fn write_points(puntos: &[Punto]) {
-    let mut file = std::io::BufWriter::new(std::fs::File::create("puntos.tsp").unwrap());
+    let mut file = BufWriter::new(File::create("puntos.tsp").unwrap());
     file.write_all("NODE_COORD_SECTION\n".as_bytes()).unwrap();
 
     for punto in puntos {
@@ -61,7 +64,7 @@ fn write_points(puntos: &[Punto]) {
 fn read_points_from_file<I: AsRef<Path>>(file_name: I) -> Vec<Punto> {
     let mut points = Vec::with_capacity(N_POINTS);
     let mut buffer = String::new();
-    let mut reader = std::io::BufReader::new(std::fs::File::open(file_name).unwrap());
+    let mut reader = std::io::BufReader::new(File::open(file_name).unwrap());
 
     while buffer.trim() != "NODE_COORD_SECTION" {
         buffer.clear();
@@ -80,12 +83,10 @@ fn read_points_from_file<I: AsRef<Path>>(file_name: I) -> Vec<Punto> {
     points
 }
 
-static N_POINTS: usize = 800_000;
-static MEDIA: u128 = 30;
 
 #[allow(unused)]
 fn write_points_with_name<I: AsRef<Path>>(name: I, puntos: &[Punto]) {
-    let mut file = std::io::BufWriter::new(std::fs::File::create(name).unwrap());
+    let mut file = BufWriter::new(File::create(name).unwrap());
     file.write_all("NODE_COORD_SECTION\n".as_bytes()).unwrap();
 
     for punto in puntos {
@@ -95,16 +96,17 @@ fn write_points_with_name<I: AsRef<Path>>(name: I, puntos: &[Punto]) {
 }
 
 fn bench() {
-    let mut puntos = read_points_from_file(PathBuf::from(POINT_FILES).join("puntos_big_2m.tsp"));
+    let file_path = PathBuf::from(POINT_FILES).join("puntos_big_2m.tsp");
+    let mut puntos = read_points_from_file(&file_path);
     puntos.sort();
-    println!("GO!");
+    println!("Testing {} GO!", file_path.display());
     let mut media;
     for points in 1..=5 {
         media = 0;
         for _ in 0..MEDIA {
             let mut dyv = DyV::new(&puntos);
             let start = Instant::now();
-            let res = dyv.start();
+            let res = dyv.start_it();
             let end = Instant::now();
 
             let actual = end.duration_since(start).as_millis();
@@ -114,6 +116,20 @@ fn bench() {
             //println!("{res}, {:?}", points);
         }
         println!("Media: {} ms with {}", media / MEDIA, points);
+    }
+}
+
+#[allow(dead_code)]
+fn prueba() {
+    for file_n in 1..=9 {
+        let file = format!("puntos_rand_{file_n}.tsp");
+        let mut puntos = read_points_from_file(PathBuf::from(POINT_FILES).join(&file));
+        puntos.sort();
+        println!("GO!");
+        println!("FILE: {}", &file);
+        let mut dyv = DyV::new(&puntos);
+        let res = dyv.start();
+        print!("\t solution: {res}");
     }
 }
 
@@ -152,4 +168,5 @@ fn main() {
     */
 
     bench()
+    //prueba()
 }
