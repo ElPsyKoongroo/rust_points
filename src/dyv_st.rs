@@ -9,7 +9,7 @@ pub struct DyV<'a> {
     best_option: BestPoint,
     best_points: [Punto; 3],
     pub fixed_points: usize,
-    f_cf: bool
+    f_cf: bool,
 }
 
 #[allow(unused)]
@@ -21,7 +21,7 @@ impl<'a> DyV<'a> {
             best_option: MAX,
             best_points: [Punto::default(), Punto::default(), Punto::default()],
             fixed_points,
-            f_cf: false
+            f_cf: false,
         }
     }
 
@@ -32,12 +32,12 @@ impl<'a> DyV<'a> {
             best_option: MAX,
             best_points: [Punto::default(), Punto::default(), Punto::default()],
             fixed_points: FIXED_POINTS,
-            f_cf: false
+            f_cf: false,
         }
     }
 
     pub fn start(&mut self) -> BestPoint {
-        self.divide_venceras(self.puntos, 0);
+        self.divide_venceras(self.puntos);
         self.best_option
     }
 
@@ -46,9 +46,10 @@ impl<'a> DyV<'a> {
         self.best_option
     }
 
-    fn calcula_fixed(&mut self, slice: &[Punto]) {
+    fn calcula_fixed_range(&mut self, slice: &[Punto], max: usize) {
         use std::cell::Cell;
-        'pi: for (i, punto_i) in slice.iter().enumerate() {
+
+        for (i, punto_i) in slice.iter().take(max).enumerate() {
             let b_option = self.best_option;
             //let (_, slice2) = slice.split_at(i+1);
 
@@ -99,9 +100,63 @@ impl<'a> DyV<'a> {
                 }
             }
         }
-        self.f_cf = true
     }
 
+    fn calcula_fixed(&mut self, slice: &[Punto]) {
+        use std::cell::Cell;
+
+        for (i, punto_i) in slice.iter().enumerate() {
+            let b_option = self.best_option;
+            //let (_, slice2) = slice.split_at(i+1);
+
+            for punto_j in slice
+                .iter()
+                .skip(i + 1)
+                .filter(|&punto_j| (punto_j.y - punto_i.y).abs() < b_option)
+            {
+                if (punto_j.x - punto_i.x).abs() >= self.best_option {
+                    break;
+                }
+
+                let distancia_ij = punto_i.distancia(punto_j);
+
+                if distancia_ij >= self.best_option {
+                    continue;
+                }
+
+                let mejor = self.best_option - distancia_ij;
+
+                let best_y_diff = Cell::new(self.best_option);
+
+                for punto_k in slice
+                    .iter()
+                    .skip(i + 1)
+                    .filter(|&punto_k| !punto_k.total_cmp(punto_j))
+                    .filter(|&punto_k| {
+                        let temp = best_y_diff.get();
+                        (punto_k.y - punto_i.y).abs() < temp && (punto_k.y - punto_j.y).abs() < temp
+                    })
+                {
+                    let mut distancia_jk = punto_j.distancia(punto_k);
+
+                    let distancia_jik = distancia_ij + punto_i.distancia(punto_k);
+
+                    if distancia_jk < mejor {
+                        distancia_jk += distancia_ij;
+                        best_y_diff.set((punto_k.y - punto_j.y).abs());
+                        self.best_option = distancia_jk;
+                        self.best_points = [*punto_j, *punto_i, *punto_k];
+                    }
+
+                    if distancia_jik < self.best_option {
+                        best_y_diff.set((punto_k.y - punto_i.y).abs());
+                        self.best_option = distancia_jik;
+                        self.best_points = [*punto_i, *punto_j, *punto_k];
+                    }
+                }
+            }
+        }
+    }
 
     fn divide_venceras_it(&mut self) {
         for chunk in self.puntos.chunks(self.fixed_points) {
@@ -110,16 +165,26 @@ impl<'a> DyV<'a> {
 
         let mut chunk_size = self.fixed_points * 2;
 
+        let v = self.puntos.len() / self.fixed_points;
+
+        for i in 0..(v - 2) {
+            let end = (i+2)*FIXED_POINTS;
+            assert!(end < self.puntos.len());
+            let slice = &self.puntos[self.fixed_points * i..end];
+            self.recheck_actual_best(slice)
+        }
+
+        /*
         while chunk_size < self.puntos.len() {
             for chunk in self.puntos.chunks(chunk_size) {
-                self.recheck_actual_best(chunk, 0)
+                self.recheck_actual_best(chunk)
             }
             chunk_size *= 2;
         }
+        */
     }
 
-    fn divide_venceras(&mut self, s_slice: &[Punto], offset: usize) {
-
+    fn divide_venceras(&mut self, s_slice: &[Punto]) {
         let len = s_slice.len();
 
         if len < self.fixed_points {
@@ -128,19 +193,19 @@ impl<'a> DyV<'a> {
 
         let mitad_index = len / 2;
         let (first_half, second_half) = s_slice.split_at(mitad_index);
-        self.divide_venceras(first_half, offset);
-        self.divide_venceras(second_half, offset + mitad_index);
+        self.divide_venceras(first_half);
+        self.divide_venceras(second_half);
 
-        self.recheck_actual_best(s_slice, offset);
+        self.recheck_actual_best(s_slice);
     }
 
-    fn recheck_actual_best(&mut self, s_slice: &[Punto], offset: usize) {
-        let mitad = s_slice[s_slice.len() / 2].x;
+    fn recheck_actual_best(&mut self, s_slice: &[Punto]) {
+        let mitad_index = s_slice.len() / 2;
+        let mitad = s_slice[mitad_index].x;
         let (new_start, new_end) =
             Self::get_points_between(mitad - self.best_option, mitad + self.best_option, s_slice);
 
-
-        self.calcula_fixed(&s_slice[new_start..new_end + 1]);
+        self.calcula_fixed_range(&s_slice[new_start..new_end + 1], mitad_index - new_start);
     }
 
     fn get_points_between(start: f64, end: f64, puntos: &[Punto]) -> (usize, usize) {
