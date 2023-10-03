@@ -163,7 +163,6 @@ impl<'a> DyV<'a> {
             self.calcula_fixed(chunk)
         }
 
-        use itertools::Itertools;
         for chunk in self.puntos.windows(self.fixed_points * 3).step_by(self.fixed_points*2) {
             self.recheck_actual_best(chunk)
         }
