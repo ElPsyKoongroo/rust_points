@@ -1,6 +1,6 @@
 use crate::punto::*;
 
-const FIXED_POINTS: usize = 180;
+const FIXED_POINTS: usize = 143;
 const MAX: f64 = f64::MAX;
 
 #[allow(unused)]
@@ -49,7 +49,7 @@ impl<'a> DyV<'a> {
     fn calcula_fixed_range(&mut self, slice: &[Punto], max: usize) {
         use std::cell::Cell;
 
-        for (i, punto_i) in slice.iter().take(max).enumerate() {
+        for (i, punto_i) in slice[..max].iter().enumerate() {
             let b_option = self.best_option;
             //let (_, slice2) = slice.split_at(i+1);
 
@@ -163,23 +163,15 @@ impl<'a> DyV<'a> {
             self.calcula_fixed(chunk)
         }
 
-        let mut chunk_size = self.fixed_points * 2;
-
-        let v = self.puntos.len() / self.fixed_points;
-
-        for i in 0..(v - 2) {
-            let end = (i+2)*FIXED_POINTS;
-            assert!(end < self.puntos.len());
-            let slice = &self.puntos[self.fixed_points * i..end];
-            self.recheck_actual_best(slice)
+        use itertools::Itertools;
+        for chunk in self.puntos.windows(self.fixed_points * 3).step_by(self.fixed_points*2) {
+            self.recheck_actual_best(chunk)
         }
-
         /*
-        while chunk_size < self.puntos.len() {
-            for chunk in self.puntos.chunks(chunk_size) {
-                self.recheck_actual_best(chunk)
-            }
-            chunk_size *= 2;
+        for i in 0..(v - 2) {
+            let end = (i + 2) * FIXED_POINTS;
+            let slice = &self.puntos.get(self.fixed_points * i..end).unwrap();
+            self.recheck_actual_best(slice)
         }
         */
     }
