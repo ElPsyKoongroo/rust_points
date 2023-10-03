@@ -46,10 +46,11 @@ impl<'a> DyV<'a> {
         self.best_option
     }
 
-    fn calcula_fixed_range(&mut self, slice: &[Punto], max: usize) {
+    fn calcula_fixed_range(&mut self, slice: &[Punto], mid: usize) {
         use std::cell::Cell;
 
-        for (i, punto_i) in slice[..max].iter().enumerate() {
+        let (f_mid, _) = slice.split_at(mid);
+        for (i, punto_i) in f_mid.iter().enumerate() {
             let b_option = self.best_option;
             //let (_, slice2) = slice.split_at(i+1);
 
@@ -158,24 +159,34 @@ impl<'a> DyV<'a> {
         }
     }
 
+
     fn divide_venceras_it(&mut self) {
         for chunk in self.puntos.chunks(self.fixed_points) {
             self.calcula_fixed(chunk)
         }
 
-        for chunk in self.puntos.windows(self.fixed_points * 3).step_by(self.fixed_points*2) {
-            self.recheck_actual_best(chunk)
-        }
+        // TODO: Check if there is a better window method for iterators that
+        // doesn't ignore the rest of the elements
         /*
+        for chunk in self
+            .puntos
+            .windows(self.fixed_points * 2)
+            .step_by(self.fixed_points)
+        {
+
+            self.recheck_actual_best_perso(chunk);
+        }
+        */
+
+        let v = self.puntos.len() / self.fixed_points;
         for i in 0..(v - 2) {
             let end = (i + 2) * FIXED_POINTS;
             let slice = &self.puntos.get(self.fixed_points * i..end).unwrap();
             self.recheck_actual_best(slice)
         }
-        */
     }
 
-    fn divide_venceras(&mut self, s_slice: &[Punto]) {
+    fn divide_venceras(&mut self, s_slice: &'a [Punto]) {
         let len = s_slice.len();
 
         if len < self.fixed_points {
@@ -190,13 +201,15 @@ impl<'a> DyV<'a> {
         self.recheck_actual_best(s_slice);
     }
 
-    fn recheck_actual_best(&mut self, s_slice: &[Punto]) {
+    fn recheck_actual_best(&mut self, s_slice: &'a [Punto]) {
         let mitad_index = s_slice.len() / 2;
         let mitad = s_slice[mitad_index].x;
         let (new_start, new_end) =
             Self::get_points_between(mitad - self.best_option, mitad + self.best_option, s_slice);
 
-        self.calcula_fixed_range(&s_slice[new_start..new_end + 1], mitad_index - new_start);
+        
+        let mid = mitad_index - new_start;
+        self.calcula_fixed_range(&s_slice[new_start..new_end + 1], mid);
     }
 
     fn get_points_between(start: f64, end: f64, puntos: &[Punto]) -> (usize, usize) {
