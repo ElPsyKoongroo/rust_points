@@ -53,7 +53,7 @@ impl<'a> DyV<'a> {
         for (i, punto_i) in f_mid.iter().enumerate() {
             let b_option = self.best_option;
 
-            for punto_j in s_half.iter() {
+            for punto_j in slice.iter().skip(i + 1) {
                 if (punto_j.y - punto_i.y).abs() >= self.best_option {
                     continue;
                 }
@@ -71,60 +71,15 @@ impl<'a> DyV<'a> {
                 let mut mejor = self.best_option - distancia_ij;
                 let best_y_diff = Cell::new(self.best_option);
 
-                for punto_k in f_mid.iter().skip(i + 1).filter(|punto_k| {
-                    let temp = best_y_diff.get();
-                    (punto_k.y - punto_i.y).abs() < temp && (punto_k.y - punto_j.y).abs() < temp
-                }) {
-                    let mut distancia_jk = punto_j.distancia(punto_k);
-
-                    let distancia_jik = distancia_ij + punto_i.distancia(punto_k);
-
-
-
-                    if distancia_jk < mejor {
-                        distancia_jk += distancia_ij;
-                        best_y_diff.set((punto_k.y - punto_j.y).abs());
-                        self.best_option = distancia_jk;
-                        mejor = self.best_option - distancia_ij;
-                        self.best_points = [*punto_j, *punto_i, *punto_k];
-                    }
-
-                    if distancia_jik < self.best_option {
-                        best_y_diff.set((punto_k.y - punto_i.y).abs());
-                        self.best_option = distancia_jik;
-                        self.best_points = [*punto_i, *punto_j, *punto_k];
-                    }
-                }
-            }
-        }
-
-        for (i, punto_i) in f_mid.iter().enumerate() {
-            let b_option = self.best_option;
-
-            for punto_j in f_mid.iter().skip(i + 1)
-            //.filter(|punto_j| (punto_j.y - punto_i.y).abs() < b_option)
-            {
-                if (punto_j.y - punto_i.y).abs() >= self.best_option {
-                    continue;
-                }
-
-                if (punto_j.x - punto_i.x).abs() >= self.best_option {
-                    break;
-                }
-
-                let distancia_ij = punto_i.distancia(punto_j);
-
-                if distancia_ij >= self.best_option {
-                    continue;
-                }
-
-                let mut mejor = self.best_option - distancia_ij;
-                let best_y_diff = Cell::new(self.best_option);
-
-                for punto_k in s_half.iter().filter(|punto_k| {
-                    let temp = best_y_diff.get();
-                    (punto_k.y - punto_i.y).abs() < temp && (punto_k.y - punto_j.y).abs() < temp
-                }) {
+                for punto_k in slice
+                    .iter()
+                    .skip(i + 1)
+                    .filter(|punto_k| !punto_k.x_eq(punto_j))
+                    .filter(|punto_k| {
+                        let temp = best_y_diff.get();
+                        (punto_k.y - punto_i.y).abs() < temp && (punto_k.y - punto_j.y).abs() < temp
+                    })
+                {
                     let mut distancia_jk = punto_j.distancia(punto_k);
 
                     let distancia_jik = distancia_ij + punto_i.distancia(punto_k);
