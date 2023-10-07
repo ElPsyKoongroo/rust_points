@@ -46,14 +46,15 @@ impl<'a> DyV<'a> {
         self.best_option
     }
 
-    fn calcula_fixed_range(&mut self, slice: &[Punto], mid: usize) {
+    fn calcula_fixed_range(&mut self, slice: &'a [Punto], mid: usize) {
         use std::cell::Cell;
 
         let (f_mid, s_half) = slice.split_at(mid);
         for (i, punto_i) in f_mid.iter().enumerate() {
             let b_option = self.best_option;
 
-            for punto_j in slice.iter().skip(i + 1) {
+            for punto_j in slice.iter().skip(i + 1) 
+                .filter(|&punto_j| (punto_j.y - punto_i.y).abs() < b_option) {
                 if (punto_j.y - punto_i.y).abs() >= self.best_option {
                     continue;
                 }
@@ -163,26 +164,6 @@ impl<'a> DyV<'a> {
 
     fn divide_venceras_it(&mut self) {
         let v = self.puntos.len() / self.fixed_points;
-
-        // Divide venceras
-
-        /*
-        let mut chunks = Vec::with_capacity(v);
-
-        for i in 0..v - 1 {
-            let end = (i + 1) * self.fixed_points;
-            let slice: &'a [Punto] = self.puntos.get(self.fixed_points * i..end).unwrap();
-            chunks.push(slice);
-        }
-        chunks.sort_by(|a, b| {
-            (a.first().unwrap().x - a.last().unwrap().x)
-                .total_cmp(&(b.first().unwrap().x - b.last().unwrap().x))
-        });
-
-        for slice in chunks {
-            self.calcula_fixed(slice)
-        }
-        */
 
         for i in 0..v - 1 {
             let end = (i + 1) * self.fixed_points;
