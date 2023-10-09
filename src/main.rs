@@ -1,17 +1,20 @@
+#![feature(portable_simd)]
 #![warn(clippy::all)]
 use rand::Rng;
 mod coord;
 mod dyv_mt;
 mod dyv_st;
+mod dyv_simd;
 mod punto;
 mod test;
 
 #[allow(unused_imports)]
 use dyv_mt::DyVMT;
 use dyv_st::DyV;
+use dyv_simd::DyVSIMD;
 use punto::*;
 
-static N_POINTS: usize = 800_000;
+static N_POINTS: usize = 2_000_000;
 static MEDIA: u128 = 30;
 const POINT_FILES: &str = "point_files/";
 
@@ -101,10 +104,10 @@ fn bench() {
     puntos.sort();
     println!("Testing {} GO!", file_path.display());
     let mut media;
-    for points in 1..=5 {
+    for points in 1..=1 {
         media = 0;
         for _ in 0..MEDIA {
-            let mut dyv = DyV::new(&puntos);
+            let mut dyv = DyVSIMD::new(&puntos);
             let start = Instant::now();
             let res = dyv.start_it();
             let end = Instant::now();

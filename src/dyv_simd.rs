@@ -4,7 +4,7 @@ const FIXED_POINTS: usize = 108;
 const MAX: f64 = f64::MAX;
 
 #[allow(unused)]
-pub struct DyV<'a> {
+pub struct DyVSIMD<'a> {
     puntos: &'a [Punto],
     best_option: BestPoint,
     best_points: [Punto; 3],
@@ -13,10 +13,10 @@ pub struct DyV<'a> {
 }
 
 #[allow(unused)]
-impl<'a> DyV<'a> {
+impl<'a> DyVSIMD<'a> {
     #[allow(unused)]
-    pub fn new_with_fixed(puntos: &'a [Punto], fixed_points: usize) -> DyV {
-        DyV {
+    pub fn new_with_fixed(puntos: &'a [Punto], fixed_points: usize) -> Self {
+        Self {
             puntos,
             best_option: MAX,
             best_points: [Punto::default(), Punto::default(), Punto::default()],
@@ -26,8 +26,8 @@ impl<'a> DyV<'a> {
     }
 
     #[allow(unused)]
-    pub fn new(puntos: &'a [Punto]) -> DyV {
-        DyV {
+    pub fn new(puntos: &'a [Punto]) -> Self {
+        Self {
             puntos,
             best_option: MAX,
             best_points: [Punto::default(), Punto::default(), Punto::default()],
@@ -36,33 +36,53 @@ impl<'a> DyV<'a> {
         }
     }
 
-    pub fn start(&mut self) -> BestPoint {
-        self.divide_venceras(self.puntos);
-        self.best_option
-    }
-
     pub fn start_it(&mut self) -> BestPoint {
         self.divide_venceras_it();
         self.best_option
     }
 
     #[inline]
-    fn get_next_point(
-        puntos: &mut impl Iterator<Item = &'a Punto>,
-        punto_i: &'a Punto,
-        target: f64,
-    ) -> Option<&'a Punto> {
-        puntos.find(|sig| (sig.y - punto_i.y).abs() < target)
+    fn get_next_point(&self, puntos: &'a [Punto], punto_i: f64, s: usize) -> Option<usize> {
+        use packed_simd::f64x4;
+        use packed_simd::Simd;
+
+        let mut start = s;
+        let vec_punto_i = f64x4::splat(punto_i);
+        let vec_distancia = f64x4::splat(self.best_option);
+
+        for start in (s..puntos.len() - 4).step_by(4) {
+            let mut ys: [f64; 4] = [0.0; 4];
+            for (i, punto) in puntos[start..start + 4].iter().enumerate() {
+                ys[i] = punto.y;
+            }
+
+            let vector_puntos = f64x4::from(ys);
+
+            let res = (vector_puntos - vec_punto_i).abs().lt(vec_distancia);
+            let val = res.bitmask();
+            for bit in 0..4 {
+                let bit_val = (val >> bit) & 1;
+                if bit_val != 0 {
+                    return Some(start + bit);
+                }
+            }
+        }
+ 
+        None
     }
 
     #[inline(always)]
     fn calcula_fixed_range(&mut self, slice: &'a [Punto], mid: usize) {
         let (f_mid, s_half) = slice.split_at(mid);
         for (i, punto_i) in f_mid.iter().enumerate() {
+            let mut j = i + 1;
+            while let Some(punto_j_index) =
+            self.get_next_point(slice, punto_i.y, j) {
 
-            let mut j_iter = slice[i + 1..].iter();
-            while let Some(punto_j) = Self::get_next_point(&mut j_iter, punto_i, self.best_option)
-            {
+                let punto_j: &'a Punto = slice.get(punto_j_index).unwrap();
+
+                j = punto_j_index + 1;
+
                 if (punto_j.x - punto_i.x) >= self.best_option {
                     break;
                 }
@@ -80,7 +100,9 @@ impl<'a> DyV<'a> {
                     .skip(i + 1)
                     .filter(|punto_k| !punto_k.x_eq(punto_j))
                 {
-                    if (punto_k.y - punto_i.y).abs() >= self.best_option && (punto_k.y - punto_j.y).abs() >= self.best_option {
+                    if (punto_k.y - punto_i.y).abs() >= self.best_option
+                        && (punto_k.y - punto_j.y).abs() >= self.best_option
+                    {
                         continue;
                     }
 
@@ -106,23 +128,26 @@ impl<'a> DyV<'a> {
 
     #[inline(always)]
     fn calcula_fixed(&mut self, slice: &'a [Punto]) {
-
         let mut i = 0;
         for punto_i in slice.iter() {
             let mut j_slice: &'a [Punto] = slice.get(i + 1..).unwrap();
             let mut j_iter = j_slice.iter();
 
-            let max_x = punto_i.x + self.best_option;
+            let mut j = i + 1;
 
-            while let Some(punto_j) = Self::get_next_point(&mut j_iter, punto_i, self.best_option) 
-            {
+            while let Some(punto_j_index) = self.get_next_point(&slice, punto_i.y, j) {
+                j = punto_j_index;
+
+                let punto_j: &'a Punto = &slice[punto_j_index];
+
+                j += 1;
+
                 if (punto_j.x - punto_i.x) >= self.best_option {
                     break;
                 }
 
                 let distancia_ij = punto_i.distancia(punto_j);
 
-                
                 if distancia_ij >= self.best_option {
                     continue;
                 }
@@ -134,7 +159,9 @@ impl<'a> DyV<'a> {
                     .skip(i + 1)
                     .filter(|punto_k| !punto_k.x_eq(punto_j))
                 {
-                    if (punto_k.y - punto_i.y).abs() >= self.best_option && (punto_k.y - punto_j.y).abs() >= self.best_option {
+                    if (punto_k.y - punto_i.y).abs() >= self.best_option
+                        && (punto_k.y - punto_j.y).abs() >= self.best_option
+                    {
                         continue;
                     }
 
@@ -154,7 +181,6 @@ impl<'a> DyV<'a> {
                         self.best_points = [*punto_i, *punto_j, *punto_k];
                     }
                 }
-
             }
             i += 1;
         }
@@ -177,21 +203,6 @@ impl<'a> DyV<'a> {
             let (left_h, right_h) = slice.split_at(self.fixed_points);
             self.recheck_actual_best(slice)
         }
-    }
-
-    fn divide_venceras(&mut self, s_slice: &'a [Punto]) {
-        let len = s_slice.len();
-
-        if len < self.fixed_points {
-            return self.calcula_fixed(s_slice);
-        }
-
-        let mitad_index = len / 2;
-        let (first_half, second_half) = s_slice.split_at(mitad_index);
-        self.divide_venceras(first_half);
-        self.divide_venceras(second_half);
-
-        self.recheck_actual_best(s_slice);
     }
 
     fn recheck_actual_best(&mut self, s_slice: &'a [Punto]) {
