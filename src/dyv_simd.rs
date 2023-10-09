@@ -1,6 +1,6 @@
 use crate::punto::*;
 
-const FIXED_POINTS: usize = 108;
+const FIXED_POINTS: usize = 117;
 const MAX: f64 = f64::MAX;
 
 #[allow(unused)]
@@ -50,9 +50,9 @@ impl<'a> DyVSIMD<'a> {
         let vec_punto_i = f64x4::splat(punto_i);
         let vec_distancia = f64x4::splat(self.best_option);
 
-        for start in (s..puntos.len() - 4).step_by(4) {
+        for chunk in puntos[s..].chunks_exact(4) {
             let mut ys: [f64; 4] = [0.0; 4];
-            for (i, punto) in puntos[start..start + 4].iter().enumerate() {
+            for (i, punto) in chunk.iter().enumerate() {
                 ys[i] = punto.y;
             }
 
@@ -66,8 +66,15 @@ impl<'a> DyVSIMD<'a> {
                     return Some(start + bit);
                 }
             }
+            start+=4;
         }
- 
+
+        while puntos.len() > start {
+            if (puntos[start].y - punto_i).abs() < self.best_option {
+                return Some(start)
+            }
+            start += 1;
+        } 
         None
     }
 
