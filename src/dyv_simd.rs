@@ -50,8 +50,9 @@ impl<'a> DyVSIMD<'a> {
         let vec_punto_i = f64x4::splat(punto_i);
         let vec_distancia = f64x4::splat(self.best_option);
 
+        let mut ys: [f64; 4] = [0.0; 4];
+
         for chunk in puntos[s..].chunks_exact(4) {
-            let mut ys: [f64; 4] = [0.0; 4];
             for (i, punto) in chunk.iter().enumerate() {
                 ys[i] = punto.y;
             }
@@ -60,21 +61,26 @@ impl<'a> DyVSIMD<'a> {
 
             let res = (vector_puntos - vec_punto_i).abs().lt(vec_distancia);
             let val = res.bitmask();
+
+            let mut i = 0;
+
+           
             for bit in 0..4 {
                 let bit_val = (val >> bit) & 1;
                 if bit_val != 0 {
                     return Some(start + bit);
                 }
             }
-            start+=4;
+           
+            start += 4;
         }
 
         while puntos.len() > start {
             if (puntos[start].y - punto_i).abs() < self.best_option {
-                return Some(start)
+                return Some(start);
             }
             start += 1;
-        } 
+        }
         None
     }
 
@@ -83,9 +89,7 @@ impl<'a> DyVSIMD<'a> {
         let (f_mid, s_half) = slice.split_at(mid);
         for (i, punto_i) in f_mid.iter().enumerate() {
             let mut j = i + 1;
-            while let Some(punto_j_index) =
-            self.get_next_point(slice, punto_i.y, j) {
-
+            while let Some(punto_j_index) = self.get_next_point(slice, punto_i.y, j) {
                 let punto_j: &'a Punto = slice.get(punto_j_index).unwrap();
 
                 j = punto_j_index + 1;
@@ -137,17 +141,12 @@ impl<'a> DyVSIMD<'a> {
     fn calcula_fixed(&mut self, slice: &'a [Punto]) {
         let mut i = 0;
         for punto_i in slice.iter() {
-            let mut j_slice: &'a [Punto] = slice.get(i + 1..).unwrap();
-            let mut j_iter = j_slice.iter();
-
             let mut j = i + 1;
 
-            while let Some(punto_j_index) = self.get_next_point(&slice, punto_i.y, j) {
-                j = punto_j_index;
-
+            while let Some(punto_j_index) = self.get_next_point(slice, punto_i.y, j) {
                 let punto_j: &'a Punto = &slice[punto_j_index];
 
-                j += 1;
+                j = 1 + punto_j_index;
 
                 if (punto_j.x - punto_i.x) >= self.best_option {
                     break;
@@ -161,10 +160,8 @@ impl<'a> DyVSIMD<'a> {
 
                 let mut mejor = self.best_option - distancia_ij;
 
-                for punto_k in slice
-                    .iter()
-                    .skip(i + 1)
-                    .filter(|punto_k| !punto_k.x_eq(punto_j))
+                for punto_k in slice.iter().skip(i + 1)
+                //.filter(|punto_k| !punto_k.x_eq(punto_j))
                 {
                     if (punto_k.y - punto_i.y).abs() >= self.best_option
                         && (punto_k.y - punto_j.y).abs() >= self.best_option
@@ -177,6 +174,9 @@ impl<'a> DyVSIMD<'a> {
                     let distancia_jik = distancia_ij + punto_i.distancia(punto_k);
 
                     if distancia_jk < mejor {
+                        if punto_k.x_eq(punto_j) {
+                            continue;
+                        }
                         distancia_jk += distancia_ij;
                         self.best_option = distancia_jk;
                         mejor = self.best_option - distancia_ij;
