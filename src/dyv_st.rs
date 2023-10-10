@@ -41,11 +41,6 @@ impl<'a> DyV<'a> {
         self.best_option
     }
 
-    pub fn start_it(&mut self) -> BestPoint {
-        self.divide_venceras_it();
-        self.best_option
-    }
-
     #[inline]
     fn get_next_point(
         puntos: &mut impl Iterator<Item = &'a Punto>,
@@ -78,7 +73,7 @@ impl<'a> DyV<'a> {
                 for punto_k in slice
                     .iter()
                     .skip(i + 1)
-                    .filter(|punto_k| !punto_k.x_eq(punto_j))
+                    .filter(|punto_k| !punto_k.total_cmp(punto_j))
                 {
                     if (punto_k.y - punto_i.y).abs() >= self.best_option && (punto_k.y - punto_j.y).abs() >= self.best_option {
                         continue;
@@ -132,7 +127,7 @@ impl<'a> DyV<'a> {
                 for punto_k in slice
                     .iter()
                     .skip(i + 1)
-                    .filter(|punto_k| !punto_k.x_eq(punto_j))
+                    .filter(|punto_k| !punto_k.total_cmp(punto_j))
                 {
                     if (punto_k.y - punto_i.y).abs() >= self.best_option && (punto_k.y - punto_j.y).abs() >= self.best_option {
                         continue;
@@ -157,25 +152,6 @@ impl<'a> DyV<'a> {
 
             }
             i += 1;
-        }
-    }
-
-    fn divide_venceras_it(&mut self) {
-        let v = self.puntos.len() / self.fixed_points;
-
-        for i in 0..v - 1 {
-            let end = (i + 1) * self.fixed_points;
-            let slice = &self.puntos.get(self.fixed_points * i..end).unwrap();
-            self.calcula_fixed(slice)
-        }
-
-        // Merge respuestas
-        for i in 0..(v - 2) {
-            let end = (i + 2) * self.fixed_points;
-            let slice = &self.puntos.get(self.fixed_points * i..end).unwrap();
-
-            let (left_h, right_h) = slice.split_at(self.fixed_points);
-            self.recheck_actual_best(slice)
         }
     }
 

@@ -117,12 +117,15 @@ mod tests {
     }
 
     mod single_thread {
-        use crate::dyv_st::DyV;
+        use crate::dyv_it::DyVIT;
+        use crate::dyv_simd::DyVSIMD;
         use crate::read_points_from_file;
+        use crate::dyv_it;
+        type MetodoCalculo<'a> = DyVSIMD<'a>;
         #[test]
         fn test_1() {
             let puntos = read_points_from_file("point_files/puntos_800000.tsp");
-            let mut dyv = DyV::new(&puntos);
+            let mut dyv = MetodoCalculo::new(&puntos);
             let res = dyv.start();
             assert_eq!(res, 0.03781606866923333);
         }
@@ -130,7 +133,7 @@ mod tests {
         #[test]
         fn test_2() {
             let puntos = read_points_from_file("point_files/puntos_500000.tsp");
-            let mut dyv = DyV::new(&puntos);
+            let mut dyv = MetodoCalculo::new(&puntos);
             let res = dyv.start();
             assert_eq!(res, 0.05537844995897111);
         }
@@ -139,14 +142,14 @@ mod tests {
         #[test]
         fn test_3() {
             let puntos = read_points_from_file("point_files/puntos_150000.tsp");
-            let mut dyv = DyV::new(&puntos);
+            let mut dyv = MetodoCalculo::new(&puntos);
             let res = dyv.start();
             assert_eq!(res, 0.144052106804805);
         }
         #[test]
         fn test_4() {
             let puntos = read_points_from_file("point_files/puntos_80000.tsp");
-            let mut dyv = DyV::new(&puntos);
+            let mut dyv = MetodoCalculo::new(&puntos);
             let res = dyv.start();
             assert_eq!(res, 0.322497589363708);
         }
@@ -154,14 +157,14 @@ mod tests {
         #[test]
         fn test_5() {
             let puntos = read_points_from_file("point_files/puntos_50000.tsp");
-            let mut dyv = DyV::new(&puntos);
+            let mut dyv = MetodoCalculo::new(&puntos);
             let res = dyv.start();
             assert_eq!(res, 0.30805303890637226);
         }
         #[test]
         fn test_6() {
             let puntos = read_points_from_file("point_files/puntos_30000.tsp");
-            let mut dyv = DyV::new(&puntos);
+            let mut dyv = MetodoCalculo::new(&puntos);
             let res = dyv.start();
             assert_eq!(res, 0.27095504920223346);
         }
@@ -182,7 +185,7 @@ mod tests {
                 let t = std::thread::spawn(move || {
                     let puntos =
                         read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
-                    let mut dyv = DyV::new(&puntos);
+                    let mut dyv = MetodoCalculo::new(&puntos);
                     let res = dyv.start();
                     assert!(res.eq(&answers[i]));
                 });
@@ -210,7 +213,7 @@ mod tests {
                 threads.push(std::thread::spawn(move || {
                     let puntos =
                         read_points_from_file(&format!("point_files/puntos_rand_{}.tsp", i));
-                    let mut dyv = DyV::new(&puntos);
+                    let mut dyv = MetodoCalculo::new(&puntos);
                     let res = dyv.start();
                     assert_eq!(res, answers[i - 5]);
                 }));
@@ -224,7 +227,7 @@ mod tests {
         #[test]
         fn d657() {
             let puntos = read_points_from_file("point_files/d657.tsp");
-            let mut dyv = DyV::new(&puntos);
+            let mut dyv = MetodoCalculo::new(&puntos);
             let res = dyv.start();
             assert_eq!(res, 35.9210244842761);
         }
@@ -246,7 +249,7 @@ mod tests {
 
             for i in 0..10 {
                 let puntos = read_points_from_file(&format!("point_files/puntos_rand_small_{}.tsp", i));
-                let mut dyv = DyV::new(&puntos);
+                let mut dyv = MetodoCalculo::new(&puntos);
                 let res = dyv.start();
                 assert_eq!(res, answers[i]);
             }

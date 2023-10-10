@@ -7,6 +7,7 @@ mod dyv_st;
 mod dyv_simd;
 mod punto;
 mod test;
+mod dyv_it;
 
 #[allow(unused_imports)]
 use dyv_mt::DyVMT;
@@ -24,6 +25,8 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
+
+use crate::dyv_it::DyVIT;
 #[allow(unused)]
 fn genera_random(num_puntos: usize, upper_bound: f64, lower_bound: f64) -> Vec<Punto> {
     let mut puntos = Vec::with_capacity(num_puntos);
@@ -109,7 +112,7 @@ fn bench() {
         for _ in 0..MEDIA {
             let mut dyv = DyVSIMD::new(&puntos);
             let start = Instant::now();
-            let res = dyv.start_it();
+            let res = dyv.start();
             let end = Instant::now();
 
             let actual = end.duration_since(start).as_millis();
