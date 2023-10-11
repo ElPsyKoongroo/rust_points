@@ -159,8 +159,6 @@ impl<'a> DyVIT<'a> {
         let v = self.puntos.len() / self.fixed_points;
 
         for chunk in self.puntos.chunks(self.fixed_points) {
-            //let end = (i + 1) * self.fixed_points;
-            //let slice = &self.puntos.get(self.fixed_points * i..end).unwrap();
             self.calcula_fixed(chunk)
         }
 

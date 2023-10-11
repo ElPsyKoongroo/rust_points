@@ -42,18 +42,20 @@ impl<'a> DyVSIMD<'a> {
     }
 
     #[inline]
-    fn get_next_point(&self, puntos: &'a [Punto], punto_i: f64, s: usize) -> Option<usize> {
+    fn get_next_point(
+        &'a self,
+        puntos: &'a [Punto],
+        punto_i: f64,
+        mut start: usize,
+    ) -> Option<usize> {
         use packed_simd::f64x4;
         use packed_simd::Simd;
 
-        let mut start = s;
         let vec_punto_i = f64x4::splat(punto_i);
         let vec_distancia = f64x4::splat(self.best_option);
-
-        let vec_pos = packed_simd::isizex4::from([0, 1, 2, 3]);
         let mut ys: [f64; 4] = [0.0; 4];
 
-        for chunk in puntos[s..].chunks_exact(4) {
+        for chunk in puntos[start..].chunks_exact(4) {
             for (i, punto) in chunk.iter().enumerate() {
                 ys[i] = punto.y;
             }
@@ -64,19 +66,22 @@ impl<'a> DyVSIMD<'a> {
 
             if res.none() {
                 start += 4;
-                continue;
-            }
-
-            let val = res.bitmask();
-            for bit in 0..4 {
-                let bit_val = (val >> bit) & 1;
-                if bit_val != 0 {
-                    return Some(start + bit);
+            } else {
+                let val = res.bitmask();
+                for bit in 0..4 {
+                    let bit_val = (val >> bit) & 1;
+                    if bit_val != 0 {
+                        return Some(start + bit);
+                    }
                 }
             }
-            start += 4;
         }
 
+        puntos[start..]
+            .iter()
+            .position(|punto_y| (punto_y.y - punto_i).abs() < self.best_option)
+            .map(|val| val + start)
+        /*
         while puntos.len() > start {
             if (puntos[start].y - punto_i).abs() < self.best_option {
                 return Some(start);
@@ -84,6 +89,7 @@ impl<'a> DyVSIMD<'a> {
             start += 1;
         }
         None
+        */
     }
 
     #[inline(always)]
@@ -92,7 +98,7 @@ impl<'a> DyVSIMD<'a> {
         for (i, punto_i) in f_mid.iter().enumerate() {
             let mut j = i + 1;
             while let Some(punto_j_index) = self.get_next_point(slice, punto_i.y, j) {
-                let punto_j: &'a Punto = slice.get(punto_j_index).unwrap();
+                let punto_j: &'a Punto = &slice[punto_j_index];
 
                 j = punto_j_index + 1;
 
@@ -108,11 +114,7 @@ impl<'a> DyVSIMD<'a> {
 
                 let mut mejor = self.best_option - distancia_ij;
 
-                for punto_k in slice
-                    .iter()
-                    .skip(i + 1)
-                    .filter(|punto_k| !punto_k.x_eq(punto_j))
-                {
+                for punto_k in slice.iter().skip(i + 1) {
                     if (punto_k.y - punto_i.y).abs() >= self.best_option
                         && (punto_k.y - punto_j.y).abs() >= self.best_option
                     {
@@ -124,6 +126,9 @@ impl<'a> DyVSIMD<'a> {
                     let distancia_jik = distancia_ij + punto_i.distancia(punto_k);
 
                     if distancia_jk < mejor {
+                        if punto_k.x_eq(punto_j) {
+                            continue;
+                        }
                         distancia_jk += distancia_ij;
                         self.best_option = distancia_jk;
                         mejor = self.best_option - distancia_ij;
@@ -146,7 +151,6 @@ impl<'a> DyVSIMD<'a> {
             let mut j = i + 1;
 
             while let Some(punto_j_index) = self.get_next_point(slice, punto_i.y, j) {
-
                 let punto_j: &'a Punto = &slice[punto_j_index];
 
                 j = 1 + punto_j_index;
@@ -208,8 +212,8 @@ impl<'a> DyVSIMD<'a> {
         // Merge respuestas
         let mut start = 0;
         while start < self.puntos.len() {
-            let mut end = start+self.fixed_points*2;
-            if start+self.fixed_points*2 > self.puntos.len() {
+            let mut end = start + self.fixed_points * 2;
+            if start + self.fixed_points * 2 > self.puntos.len() {
                 end = self.puntos.len()
             }
             let slice = self.puntos.get(start..end).unwrap();
