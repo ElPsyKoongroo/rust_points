@@ -1,6 +1,10 @@
+
+
+use std::simd::{cmp::SimdPartialEq, Mask};
+
 use crate::punto::*;
 
-const FIXED_POINTS: usize = 117;
+const FIXED_POINTS: usize = 98;
 const MAX: f64 = f64::MAX;
 
 #[allow(unused)]
@@ -48,12 +52,18 @@ impl<'a> DyVSIMD<'a> {
         punto_i: f64,
         mut start: usize,
     ) -> Option<usize> {
-        use packed_simd::f64x4;
-        use packed_simd::Simd;
+
+        use std::simd::{f64x4, f64x8};
+        use std::simd::prelude::SimdFloat;
+        //use std::simd::prelude::;
+        use std::simd::cmp::SimdPartialOrd;
+
+        use std::ops::Not;
 
         let vec_punto_i = f64x4::splat(punto_i);
         let vec_distancia = f64x4::splat(self.best_option);
         let mut ys: [f64; 4] = [0.0; 4];
+        let zero: Mask<i64, 4> = Mask::splat(false);
 
         for chunk in puntos[start..].chunks_exact(4) {
             for (i, punto) in chunk.iter().enumerate() {
@@ -62,12 +72,14 @@ impl<'a> DyVSIMD<'a> {
 
             let vector_puntos = f64x4::from(ys);
 
-            let res = (vector_puntos - vec_punto_i).abs().lt(vec_distancia);
+            let res = (vector_puntos - vec_punto_i).abs().simd_lt(vec_distancia);
 
-            if res.none() {
+
+            let val = res.to_bitmask();
+            if val == 0 {
                 start += 4;
             } else {
-                let val = res.bitmask();
+                //let val = res.to_bitmask();
                 for bit in 0..4 {
                     let bit_val = (val >> bit) & 1;
                     if bit_val != 0 {

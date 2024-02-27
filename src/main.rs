@@ -1,5 +1,5 @@
-#![feature(portable_simd)]
 #![warn(clippy::all)]
+#![feature(portable_simd)]
 use rand::Rng;
 mod coord;
 mod dyv_mt;
@@ -107,7 +107,7 @@ fn bench() {
     puntos.sort();
     println!("Testing {} GO!", file_path.display());
     let mut media;
-    for points in 1..=1 {
+    for points in 1..=2 {
         media = 0;
         for _ in 0..MEDIA {
             let mut dyv = DyVSIMD::new(&puntos);
