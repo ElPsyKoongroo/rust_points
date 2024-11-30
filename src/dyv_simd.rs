@@ -1,7 +1,3 @@
-
-
-use std::simd::{cmp::SimdPartialEq, Mask};
-
 use crate::punto::*;
 
 const FIXED_POINTS: usize = 98;
@@ -33,7 +29,7 @@ impl<'a> DyVSIMD<'a> {
     pub fn new(puntos: &'a [Punto]) -> Self {
         Self {
             puntos,
-            best_option: MAX,
+            best_option: puntos[0].distancia3(&puntos[1], &puntos[2]),
             best_points: [Punto::default(), Punto::default(), Punto::default()],
             fixed_points: FIXED_POINTS,
             f_cf: false,
@@ -49,59 +45,49 @@ impl<'a> DyVSIMD<'a> {
     fn get_next_point(
         &'a self,
         puntos: &'a [Punto],
-        punto_i: f64,
+        punto_i: &'a Punto,
         mut start: usize,
     ) -> Option<usize> {
-
-        use std::simd::{f64x4, f64x8};
-        use std::simd::prelude::SimdFloat;
-        //use std::simd::prelude::;
-        use std::simd::cmp::SimdPartialOrd;
-
         use std::ops::Not;
+        use std::simd::cmp::SimdPartialOrd;
+        use std::simd::prelude::SimdFloat;
+        use std::simd::{f64x4, f64x8};
 
-        let vec_punto_i = f64x4::splat(punto_i);
+        let vec_punto_i = f64x4::splat(punto_i.y);
         let vec_distancia = f64x4::splat(self.best_option);
-        let mut ys: [f64; 4] = [0.0; 4];
-        let zero: Mask<i64, 4> = Mask::splat(false);
 
-        for chunk in puntos[start..].chunks_exact(4) {
-            for (i, punto) in chunk.iter().enumerate() {
-                ys[i] = punto.y;
+        let mut it = puntos[start..].array_chunks::<8>();
+        let max_x = punto_i.x + self.best_option;
+
+        while let Some(chunk) = it.next() {
+            //for chunk in it.by_ref() {
+            if chunk[0].x >= max_x {
+                return None;
             }
 
-            let vector_puntos = f64x4::from(ys);
+            let vector_y = f64x4::from_array([chunk[0].y, chunk[1].y, chunk[2].y, chunk[3].y]);
+            let res = (vector_y - vec_punto_i).abs().simd_le(vec_distancia);
+            match res.first_set() {
+                None => start += 4,
+                Some(i) => return Some(start + i),
+            }
+            // Unroll
 
-            let res = (vector_puntos - vec_punto_i).abs().simd_lt(vec_distancia);
-
-
-            let val = res.to_bitmask();
-            if val == 0 {
-                start += 4;
-            } else {
-                //let val = res.to_bitmask();
-                for bit in 0..4 {
-                    let bit_val = (val >> bit) & 1;
-                    if bit_val != 0 {
-                        return Some(start + bit);
-                    }
-                }
+            let vector_y = f64x4::from_array([chunk[4].y, chunk[5].y, chunk[6].y, chunk[7].y]);
+            let res = (vector_y - vec_punto_i).abs().simd_le(vec_distancia);
+            match res.first_set() {
+                None => start += 4,
+                Some(i) => return Some(start + i),
             }
         }
 
-        puntos[start..]
+        it.remainder()
             .iter()
-            .position(|punto_y| (punto_y.y - punto_i).abs() < self.best_option)
+            .position(|punto_y| {
+                (punto_y.y - punto_i.y).abs() < self.best_option
+                    && (punto_y.x - punto_i.x).abs() < self.best_option
+            })
             .map(|val| val + start)
-        /*
-        while puntos.len() > start {
-            if (puntos[start].y - punto_i).abs() < self.best_option {
-                return Some(start);
-            }
-            start += 1;
-        }
-        None
-        */
     }
 
     #[inline(always)]
@@ -109,14 +95,11 @@ impl<'a> DyVSIMD<'a> {
         let (f_mid, s_half) = slice.split_at(mid);
         for (i, punto_i) in f_mid.iter().enumerate() {
             let mut j = i + 1;
-            while let Some(punto_j_index) = self.get_next_point(slice, punto_i.y, j) {
+
+            while let Some(punto_j_index) = self.get_next_point(slice, punto_i, j) {
                 let punto_j: &'a Punto = &slice[punto_j_index];
 
                 j = punto_j_index + 1;
-
-                if (punto_j.x - punto_i.x) >= self.best_option {
-                    break;
-                }
 
                 let distancia_ij = punto_i.distancia(punto_j);
 
@@ -126,7 +109,7 @@ impl<'a> DyVSIMD<'a> {
 
                 let mut mejor = self.best_option - distancia_ij;
 
-                for punto_k in slice.iter().skip(i + 1) {
+                for punto_k in s_half.iter() {
                     if (punto_k.y - punto_i.y).abs() >= self.best_option
                         && (punto_k.y - punto_j.y).abs() >= self.best_option
                     {
@@ -162,8 +145,8 @@ impl<'a> DyVSIMD<'a> {
         for punto_i in slice.iter() {
             let mut j = i + 1;
 
-            while let Some(punto_j_index) = self.get_next_point(slice, punto_i.y, j) {
-                let punto_j: &'a Punto = &slice[punto_j_index];
+            while let Some(punto_j_index) = self.get_next_point(slice, punto_i, j) {
+                let punto_j: &'a Punto = unsafe { slice.get_unchecked(punto_j_index) }; //&slice[punto_j_index];
 
                 j = 1 + punto_j_index;
 
